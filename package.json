@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "eslint-plugin-html": "^8.0.0",
+    "htmlhint": "^1.1.4",
+    "markdownlint-cli2": "^0.17.0"
+  }
+}

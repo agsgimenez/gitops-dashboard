@@ -5,6 +5,7 @@ All notable changes to GitOps Dashboard are documented here.
 ## [1.0.0] — 2026-06-05
 
 ### Added
+
 - **Workspace switcher** — full-screen landing with real GitHub avatars; auto-skips picker for single-org configs
 - **PR Board** (`prs.html`) — open PRs across all repos with live check run status, labels, reviewers, draft detection; filters: all / failing / ready / draft / needs review
 - **Browser notifications** — native OS notification when a running workflow completes (success or failure)

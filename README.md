@@ -116,7 +116,7 @@ Files in `envs/` are gitignored.
 
 ## Project structure
 
-```
+```text
 gitops-dashboard/
 ├── index.html            # Home: PAT setup + workspace switcher
 ├── dashboard.html        # CI dashboard (?ctx=<org>)

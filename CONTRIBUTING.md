@@ -7,6 +7,7 @@ Thanks for taking the time to contribute!
 ### Reporting bugs
 
 Open an [issue](https://github.com/agsgimenez/gitops-dashboard/issues/new?template=bug_report.md) and include:
+
 - Browser and OS
 - Steps to reproduce
 - Expected vs actual behavior
@@ -16,16 +17,26 @@ Open an [issue](https://github.com/agsgimenez/gitops-dashboard/issues/new?templa
 
 Open an [issue](https://github.com/agsgimenez/gitops-dashboard/issues/new?template=feature_request.md) with a clear description of the problem it solves.
 
+### Branch naming
+
+| Prefix | Use for |
+|--------|---------|
+| `feature/` | New functionality |
+| `fix/` | Bug corrections |
+| `docs/` | Documentation only |
+
+Examples: `feature/env-comparison`, `fix/workflow-dispatch-modal`, `docs/screenshots`
+
 ### Submitting a PR
 
-1. Fork the repo and create a branch from `main`
+1. Fork the repo and create a branch using the naming convention above
 2. Make your changes — the project is plain HTML/CSS/JS, no build step
 3. Test by opening the files directly in a browser
-4. Open a pull request against `main`
+4. Open a pull request against `main` — CI must pass before merging
 
 ## Project structure
 
-```
+```text
 gitops-dashboard/
 ├── index.html          # Home: Workspace switcher + PAT setup
 ├── dashboard.html      # CI workflow monitor (reads ?ctx= from URL)
