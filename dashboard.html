@@ -36,6 +36,14 @@ header h1{font-size:14px;font-weight:700;flex:0 0 auto}
 .fbtn:hover{background:var(--btn);color:var(--tx)}
 .fbtn.active{background:var(--s2);border-color:var(--bd);color:var(--tx)}
 
+/* ── user filter ── */
+#user-filter-bar{padding:6px 24px;border-bottom:1px solid var(--bd);display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-height:0;overflow:hidden}
+#user-filter-bar:empty{display:none;padding:0;border:none}
+.ufbtn{background:transparent;border:1px solid transparent;color:var(--mu);padding:2px 9px 2px 5px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:5px}
+.ufbtn:hover{background:var(--btn);color:var(--tx)}
+.ufbtn.active{background:var(--s2);border-color:var(--bd);color:var(--tx)}
+.ufbtn img{border-radius:50%;flex-shrink:0}
+
 /* ── main ── */
 main{padding:20px 24px;max-width:1100px}
 #loading{text-align:center;padding:60px;color:var(--mu)}
@@ -149,6 +157,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <button class="fbtn" onclick="setFilter('dispatch',this)">▶ Manuales</button>
   <button class="fbtn" onclick="setFilter('schedule',this)">⏰ Scheduled</button>
 </div>
+<div id="user-filter-bar"></div>
 
 <main id="content"><div id="loading">Cargando…</div></main>
 
@@ -199,7 +208,8 @@ const LS_PAT='ci_pat', LS_REPOS='ci_repos', GH='https://api.github.com';
 let lastData=[], currentFilter='all', cdVal=30, cdTimer=null;
 let dmContext=null;
 let currentContext='all';
-let prevStatuses=new Map(); // key: owner/repo/wfId → status string
+let currentUserFilter=null;
+let prevStatuses=new Map();
 
 // ── config ───────────────────────────────────────────────
 function getPat()   { return window.CI_CONFIG?.pat   || localStorage.getItem(LS_PAT); }
@@ -338,12 +348,14 @@ function parseRepos(){
 async function loadAll(){
   const btn=document.getElementById('rbtn');
   btn.textContent='↻ …'; btn.disabled=true;
+  currentUserFilter=null;
   const repos=parseRepos().filter(r=>currentContext==='all'||r.owner===currentContext);
   lastData=await Promise.all(repos.map(async({owner,repo})=>{
     try{return{owner,repo,runs:await fetchRuns(owner,repo)};}
     catch(e){return{owner,repo,runs:[],error:e.message};}
   }));
   trackAndNotify(lastData);
+  buildUserPills(lastData);
   render(lastData,currentFilter);
   btn.textContent='↻ Refresh'; btn.disabled=false;
   resetCd();
@@ -364,12 +376,46 @@ function setFilter(f,el){
   render(lastData,f);
 }
 function filterRuns(runs,f){
-  if(f==='all') return runs;
-  if(f==='failure') return runs.filter(r=>['failure','timed_out','startup_failure'].includes(r.conclusion));
-  if(f==='running') return runs.filter(r=>['in_progress','queued','waiting'].includes(r.status));
-  if(f==='dispatch') return runs.filter(r=>r.event==='workflow_dispatch');
-  if(f==='schedule') return runs.filter(r=>r.event==='schedule');
-  return runs;
+  let out=runs;
+  if(f==='failure') out=out.filter(r=>['failure','timed_out','startup_failure'].includes(r.conclusion));
+  else if(f==='running') out=out.filter(r=>['in_progress','queued','waiting'].includes(r.status));
+  else if(f==='dispatch') out=out.filter(r=>r.event==='workflow_dispatch');
+  else if(f==='schedule') out=out.filter(r=>r.event==='schedule');
+  if(currentUserFilter) out=out.filter(r=>r.actor?.login===currentUserFilter);
+  return out;
+}
+
+function setUserFilter(login,el){
+  currentUserFilter=login;
+  document.querySelectorAll('.ufbtn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  render(lastData,currentFilter);
+}
+
+function buildUserPills(data){
+  const bar=document.getElementById('user-filter-bar');
+  const seen=new Map();
+  for(const{runs}of data){
+    for(const r of runs){
+      if(r.actor?.login&&!seen.has(r.actor.login))
+        seen.set(r.actor.login,r.actor.avatar_url);
+    }
+  }
+  if(seen.size<2){bar.innerHTML='';return;}
+  const allBtn=`<button class="ufbtn active" id="uf-all" onclick="setUserFilter(null,this)">Todos</button>`;
+  const pills=[...seen.entries()].map(([login,av])=>{
+    const img=av?`<img src="${av}&s=20" width="16" height="16" alt="">`:''
+    return `<button class="ufbtn" onclick="setUserFilter('${esc(login)}',this)">${img}${esc(login)}</button>`;
+  }).join('');
+  bar.innerHTML=allBtn+pills;
+  // restore active state
+  if(currentUserFilter){
+    const all=bar.querySelector('#uf-all');
+    if(all) all.classList.remove('active');
+    bar.querySelectorAll('.ufbtn').forEach(b=>{
+      if(b.textContent.trim()===currentUserFilter||b.querySelector('img+*')?.textContent===currentUserFilter) b.classList.add('active');
+    });
+  }
 }
 
 // ── ui helpers ───────────────────────────────────────────

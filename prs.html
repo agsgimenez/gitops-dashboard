@@ -34,6 +34,14 @@ header h1{font-size:14px;font-weight:700;flex:0 0 auto}
 .fbtn:hover{background:var(--btn);color:var(--tx)}
 .fbtn.active{background:var(--s2);border-color:var(--bd);color:var(--tx)}
 
+/* ── user filter ── */
+#user-filter-bar{padding:6px 24px;border-bottom:1px solid var(--bd);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+#user-filter-bar:empty{display:none;padding:0;border:none}
+.ufbtn{background:transparent;border:1px solid transparent;color:var(--mu);padding:2px 9px 2px 5px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:5px}
+.ufbtn:hover{background:var(--btn);color:var(--tx)}
+.ufbtn.active{background:var(--s2);border-color:var(--bd);color:var(--tx)}
+.ufbtn img{border-radius:50%;flex-shrink:0}
+
 /* ── main ── */
 main{padding:20px 24px;max-width:1200px}
 #loading{text-align:center;padding:60px;color:var(--mu)}
@@ -97,15 +105,17 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <button class="fbtn" onclick="setFilter('draft',this)">📝 Draft</button>
   <button class="fbtn" onclick="setFilter('review',this)">👀 Necesitan review</button>
 </div>
+<div id="user-filter-bar"></div>
 
 <main id="content"><div id="loading">Cargando PRs…</div></main>
 
 <script src="config.js" onerror="void 0"></script>
 <script>
 const LS_PAT='ci_pat', LS_REPOS='ci_repos', GH='https://api.github.com';
-let allData=[];       // [{ owner, repo, prs, error }]
-let checksCache={};   // sha → { ok, er, wa, total, runs[] }
+let allData=[];
+let checksCache={};
 let currentFilter='all';
+let currentUserFilter=null;
 let currentContext='all';
 
 function getPat()   { return window.CI_CONFIG?.pat   || localStorage.getItem(LS_PAT); }
@@ -171,6 +181,7 @@ async function loadAll(){
   const btn=document.getElementById('rbtn');
   btn.textContent='↻ …'; btn.disabled=true;
   checksCache={};
+  currentUserFilter=null;
 
   const repos=parseRepos().filter(r=>currentContext==='all'||r.owner===currentContext);
   allData=await Promise.all(repos.map(async({owner,repo})=>{
@@ -179,6 +190,7 @@ async function loadAll(){
   }));
 
   // Render PRs immediately (without checks)
+  buildUserPills(allData);
   render(allData, currentFilter);
   btn.textContent='↻ Refresh'; btn.disabled=false;
 
@@ -207,12 +219,44 @@ function setFilter(f,el){
 
 function prPassesFilter(pr, sha, f){
   const checks=checksCache[sha]||{ok:0,er:0,wa:0,total:0};
-  if(f==='all') return true;
-  if(f==='draft') return pr.draft;
-  if(f==='failing') return checks.er>0;
-  if(f==='ready') return !pr.draft && checks.total>0 && checks.er===0 && checks.wa===0;
-  if(f==='review') return !pr.draft && (pr.requested_reviewers||[]).length>0;
+  if(f==='draft'&&!pr.draft) return false;
+  if(f==='failing'&&checks.er===0) return false;
+  if(f==='ready'&&(pr.draft||checks.total===0||checks.er>0||checks.wa>0)) return false;
+  if(f==='review'&&(pr.draft||(pr.requested_reviewers||[]).length===0)) return false;
+  if(currentUserFilter){
+    const isAuthor=pr.user?.login===currentUserFilter;
+    const isReviewer=(pr.requested_reviewers||[]).some(r=>r.login===currentUserFilter);
+    if(!isAuthor&&!isReviewer) return false;
+  }
   return true;
+}
+
+function setUserFilter(login,el){
+  currentUserFilter=login;
+  document.querySelectorAll('.ufbtn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  render(allData,currentFilter);
+}
+
+function buildUserPills(data){
+  const bar=document.getElementById('user-filter-bar');
+  const seen=new Map();
+  for(const{prs}of data){
+    for(const pr of (prs||[])){
+      if(pr.user?.login&&!seen.has(pr.user.login))
+        seen.set(pr.user.login,pr.user.avatar_url);
+      for(const rv of (pr.requested_reviewers||[])){
+        if(rv.login&&!seen.has(rv.login)) seen.set(rv.login,rv.avatar_url);
+      }
+    }
+  }
+  if(seen.size<2){bar.innerHTML='';return;}
+  const allBtn=`<button class="ufbtn active" id="uf-all" onclick="setUserFilter(null,this)">Todos</button>`;
+  const pills=[...seen.entries()].map(([login,av])=>{
+    const img=av?`<img src="${av}&s=20" width="16" height="16" alt="">`:''
+    return `<button class="ufbtn" onclick="setUserFilter('${esc(login)}',this)">${img}${esc(login)}</button>`;
+  }).join('');
+  bar.innerHTML=allBtn+pills;
 }
 
 // ── render ────────────────────────────────────────────────
