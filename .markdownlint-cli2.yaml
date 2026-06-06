@@ -1,0 +1,5 @@
+config:
+  MD013: false   # line length — tables and code blocks make this impractical
+  MD033: false   # inline HTML — README uses HTML tables
+  MD024: false   # duplicate headings — CHANGELOG repeats "Added", "Fixed", etc.
+  MD041: false   # first line h1 — issue/PR templates start with YAML frontmatter

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src https://api.github.com; img-src https://github.com https://avatars.githubusercontent.com https://raw.githubusercontent.com data:; font-src 'none';">
+<title>GitOps Dashboard</title>
+<style>
+:root{
+  --bg:#0d1117;--s1:#161b22;--s2:#1c2128;--bd:#30363d;
+  --tx:#e6edf3;--mu:#8b949e;--lk:#58a6ff;
+  --ok:#3fb950;--er:#f85149;--wa:#d29922;--ne:#6e7681;
+  --btn:#21262d;--bth:#30363d;--gr:#238636;--grh:#2ea043;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+
+/* ── setup ── */
+.sc{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:32px;width:100%;max-width:480px;display:flex;flex-direction:column;gap:20px}
+.sc h1{font-size:18px;font-weight:600}
+.sc p{color:var(--mu);font-size:13px;line-height:1.5}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:11px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.5px}
+.field input,.field textarea{background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;border-radius:6px;font-size:13px;width:100%}
+.field textarea{resize:vertical;min-height:80px;font-family:monospace}
+.field input:focus,.field textarea:focus{outline:none;border-color:var(--lk)}
+.sc button{background:var(--gr);border:none;color:#fff;padding:10px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:500}
+.sc button:hover{background:var(--grh)}
+.hint{color:var(--mu);font-size:11px}.hint a{color:var(--lk)}
+
+/* ── picker ── */
+#picker{display:none;flex-direction:column;align-items:center;gap:52px;width:100%}
+#picker h2{font-size:26px;font-weight:700;letter-spacing:.5px;color:var(--tx)}
+#picker-cards{display:flex;gap:28px;flex-wrap:wrap;justify-content:center;padding:0 24px}
+.picker-card{width:140px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:14px;transition:transform .15s}
+.picker-card:hover{transform:scale(1.06)}
+.picker-card:hover .picker-name{color:var(--tx)}
+.picker-avatar{width:90px;height:90px;border-radius:8px;border:3px solid transparent;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;color:#fff;transition:border-color .15s;overflow:hidden;user-select:none}
+.picker-card:hover .picker-avatar{border-color:#fff}
+.picker-all{width:90px;height:90px;border-radius:8px;border:2px dashed var(--bd);display:flex;align-items:center;justify-content:center;font-size:30px;color:var(--mu);transition:border-color .15s,color .15s;overflow:hidden}
+.picker-card:hover .picker-all{border-color:#fff;color:var(--tx)}
+.picker-name{font-size:14px;color:var(--mu);font-weight:600;text-align:center;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.picker-loading{color:var(--mu);font-size:13px;text-align:center}
+
+/* ── lang toggle ── */
+#lang-btn{position:fixed;top:14px;right:16px;background:var(--btn);border:1px solid var(--bd);color:var(--tx);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px;z-index:50}
+#lang-btn:hover{background:var(--bth)}
+</style>
+</head>
+<body>
+
+<button id="lang-btn" onclick="toggleLang()"></button>
+
+<!-- Setup (no PAT) -->
+<div id="setup" style="display:none">
+  <div class="sc">
+    <h1>GitOps Dashboard</h1>
+    <p data-i18n="setup_desc"></p>
+    <div class="field">
+      <label data-i18n="setup_pat_label"></label>
+      <input id="setup-pat" type="password" placeholder="ghp_..." autocomplete="off"/>
+      <span class="hint" data-i18n="setup_pat_hint" data-i18n-html></span>
+    </div>
+    <div class="field">
+      <label data-i18n="setup_repos_label"></label>
+      <textarea id="setup-repos"></textarea>
+    </div>
+    <button onclick="saveSetup()" data-i18n="setup_submit"></button>
+  </div>
+</div>
+
+<!-- Picker -->
+<div id="picker">
+  <h2 data-i18n="picker_heading"></h2>
+  <div id="picker-cards"><p class="picker-loading" data-i18n="picker_loading"></p></div>
+</div>
+
+<script src="i18n.js"></script>
+<script src="config.js" onerror="void 0"></script>
+<script>
+const LS_PAT='ci_pat', LS_REPOS='ci_repos', GH='https://api.github.com';
+const CTX_COLORS=['#58a6ff','#3fb950','#d29922','#a371f7','#f78166','#39d353'];
+
+function getPat()   { return window.CI_CONFIG?.pat   || localStorage.getItem(LS_PAT); }
+function getRepos() { return window.CI_CONFIG?.repos?.join('\n') || localStorage.getItem(LS_REPOS) || ''; }
+
+function parseRepos(){
+  return getRepos().split('\n').map(s=>s.trim())
+    .filter(s=>s.includes('/')&&!s.startsWith('//')&&!s.startsWith('#'))
+    .map(s=>{const[o,r]=s.split('/');return{owner:o,repo:r};});
+}
+function uniqueOwners(){ return [...new Set(parseRepos().map(r=>r.owner))]; }
+
+function saveSetup(){
+  const p=document.getElementById('setup-pat').value.trim();
+  const r=document.getElementById('setup-repos').value.trim();
+  if(!p||!r) return alert(t('setup_required'));
+  localStorage.setItem(LS_PAT,p); localStorage.setItem(LS_REPOS,r);
+  showPicker();
+}
+
+function init(){
+  applyI18n();
+  document.getElementById('setup-repos').placeholder=t('setup_repos_placeholder');
+  if(!getPat()||!getRepos()){
+    document.getElementById('setup').style.display='flex';
+  } else {
+    showPicker();
+  }
+}
+
+async function showPicker(){
+  document.getElementById('setup').style.display='none';
+  document.getElementById('picker').style.display='flex';
+
+  const owners=uniqueOwners();
+
+  if(owners.length===1){
+    location.replace(`dashboard.html?ctx=${encodeURIComponent(owners[0])}`);
+    return;
+  }
+
+  const cards=document.getElementById('picker-cards');
+
+  cards.innerHTML=owners.map((o,i)=>{
+    const color=CTX_COLORS[i%CTX_COLORS.length];
+    return `<div class="picker-card" onclick="goTo('${encodeURIComponent(o)}')">
+      <div class="picker-avatar" style="background:${color}" id="av-${i}">${o.charAt(0).toUpperCase()}</div>
+      <span class="picker-name">${o}</span>
+    </div>`;
+  }).join('')+buildAllCard(owners);
+
+  owners.forEach((owner,i)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const av=document.getElementById(`av-${i}`);
+      if(av) av.innerHTML=`<img src="${img.src}" width="90" height="90" style="display:block">`;
+    };
+    img.src=`https://github.com/${encodeURIComponent(owner)}.png?size=90`;
+  });
+}
+
+function buildAllCard(owners){
+  const minis=owners.slice(0,4).map(o=>
+    `<img src="https://github.com/${encodeURIComponent(o)}.png?size=40" width="38" height="38" style="border-radius:3px;display:block" onerror="this.style.display='none'">`
+  ).join('');
+  const inner=owners.length>=2
+    ?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:6px">${minis}</div>`
+    :`⊕`;
+  return `<div class="picker-card" onclick="goTo('all')">
+    <div class="picker-all">${inner}</div>
+    <span class="picker-name">${t('picker_all')}</span>
+  </div>`;
+}
+
+function goTo(ctx){
+  location.href=`dashboard.html?ctx=${ctx}`;
+}
+
+init();
+</script>
+</body>
+</html>

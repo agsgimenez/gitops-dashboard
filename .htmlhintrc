@@ -1,0 +1,12 @@
+{
+  "doctype-first": true,
+  "doctype-html5": true,
+  "tag-pair": true,
+  "attr-lowercase": true,
+  "attr-no-duplication": true,
+  "id-unique": true,
+  "src-not-empty": true,
+  "title-require": true,
+  "inline-style-disabled": false,
+  "inline-script-disabled": false
+}

@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src https://api.github.com; img-src https://github.com https://avatars.githubusercontent.com https://raw.githubusercontent.com data:; font-src 'none';">
+<title>Env Manager — GitOps Dashboard</title>
+<style>
+:root{
+  --bg:#0d1117;--s1:#161b22;--s2:#1c2128;--bd:#30363d;
+  --tx:#e6edf3;--mu:#8b949e;--lk:#58a6ff;
+  --ok:#3fb950;--er:#f85149;--wa:#d29922;--ne:#6e7681;
+  --btn:#21262d;--bth:#30363d;--gr:#238636;--grh:#2ea043;
+  --pu:#a371f7;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;min-height:100vh}
+
+/* ── header ── */
+header{padding:11px 24px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:12px;position:sticky;top:0;background:var(--bg);z-index:20}
+header a{color:var(--mu);font-size:12px;text-decoration:none;padding:4px 10px;border:1px solid var(--bd);border-radius:6px;background:var(--btn)}
+header a:hover{color:var(--tx);background:var(--bth)}
+header h1{font-size:14px;font-weight:700}
+.sep{color:var(--bd);font-size:16px}
+
+/* ── toolbar ── */
+#toolbar{padding:14px 24px;border-bottom:1px solid var(--bd);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+select{background:var(--s1);border:1px solid var(--bd);color:var(--tx);padding:6px 10px;border-radius:6px;font-size:13px;cursor:pointer}
+select:focus{outline:none;border-color:var(--lk)}
+.btn{border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;white-space:nowrap}
+.btn-primary{background:var(--gr);color:#fff}.btn-primary:hover{background:var(--grh)}
+.btn-secondary{background:var(--btn);color:var(--tx);border:1px solid var(--bd)}.btn-secondary:hover{background:var(--bth)}
+.btn-danger{background:transparent;color:var(--er);border:1px solid rgba(248,81,73,.4)}.btn-danger:hover{background:rgba(248,81,73,.08)}
+.btn-purple{background:rgba(163,113,247,.15);color:var(--pu);border:1px solid rgba(163,113,247,.3)}.btn-purple:hover{background:rgba(163,113,247,.25)}
+.btn:disabled{opacity:.4;cursor:default}
+.sep-v{width:1px;height:24px;background:var(--bd);flex-shrink:0}
+#env-label{font-size:12px;color:var(--mu);padding:4px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:12px;white-space:nowrap}
+
+/* ── layout ── */
+main{padding:20px 24px;display:grid;grid-template-columns:1fr 340px;gap:20px;max-width:1300px}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+
+/* ── panels ── */
+.panel{background:var(--s1);border:1px solid var(--bd);border-radius:8px;overflow:hidden}
+.panel-head{padding:10px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px;background:var(--s2)}
+.panel-head h2{font-size:13px;font-weight:600;flex:1}
+.panel-head .badge{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600}
+.badge-var{background:rgba(88,166,255,.12);color:#58a6ff;border:1px solid rgba(88,166,255,.25)}
+.badge-secret{background:rgba(163,113,247,.12);color:#a371f7;border:1px solid rgba(163,113,247,.25)}
+.badge-missing{background:rgba(248,81,73,.12);color:#f85149;border:1px solid rgba(248,81,73,.25)}
+.badge-ok{background:rgba(63,185,80,.12);color:#3fb950;border:1px solid rgba(63,185,80,.25)}
+.panel-body{padding:0}
+.empty{padding:24px;text-align:center;color:var(--mu);font-size:13px}
+
+/* ── vars table ── */
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:6px 12px;font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd);background:var(--s2);white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid var(--bd);vertical-align:middle;font-size:13px}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.key{font-family:monospace;color:var(--tx);font-size:12px}
+.val{font-family:monospace;color:var(--mu);font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.val.hidden{letter-spacing:2px;color:var(--ne)}
+.row-actions{display:flex;gap:5px;justify-content:flex-end}
+.ia{background:var(--btn);border:1px solid var(--bd);color:var(--mu);padding:2px 8px;border-radius:5px;cursor:pointer;font-size:11px}
+.ia:hover{background:var(--bth);color:var(--tx)}
+.ia.del{border-color:rgba(248,81,73,.3)}.ia.del:hover{color:var(--er);background:rgba(248,81,73,.08)}
+.status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px;flex-shrink:0}
+.dot-ok{background:var(--ok)}.dot-miss{background:var(--er)}.dot-unknown{background:var(--ne)}
+
+/* ── right panel ── */
+.form-body{padding:16px;display:flex;flex-direction:column;gap:12px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:11px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.4px}
+.field input,.field textarea,.field select{background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:7px 10px;border-radius:6px;font-size:13px;width:100%;font-family:monospace}
+.field textarea{resize:vertical;min-height:70px}
+.field input:focus,.field textarea:focus{outline:none;border-color:var(--lk)}
+.field .hint{font-size:11px;color:var(--mu)}
+.tabs{display:flex;border-bottom:1px solid var(--bd)}
+.tab{flex:1;padding:8px;background:transparent;border:none;color:var(--mu);cursor:pointer;font-size:12px;font-weight:500;border-bottom:2px solid transparent}
+.tab.active{color:var(--tx);border-bottom-color:var(--lk)}
+.tab:hover:not(.active){color:var(--tx)}
+
+/* ── cli output ── */
+.cli-box{background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:12px;font-family:monospace;font-size:11px;color:#adbac7;white-space:pre-wrap;word-break:break-all;max-height:320px;overflow-y:auto}
+.cli-comment{color:var(--ne)}
+
+/* ── compare section ── */
+.compare-row{display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--bd);font-size:12px}
+.compare-row:last-child{border-bottom:none}
+.compare-row .key{flex:1}
+.compare-row .tag{font-size:10px;padding:2px 6px;border-radius:8px;font-weight:600;white-space:nowrap}
+.tag-ok{background:rgba(63,185,80,.1);color:var(--ok)}
+.tag-miss{background:rgba(248,81,73,.1);color:var(--er)}
+.tag-extra{background:rgba(210,153,34,.1);color:var(--wa)}
+
+/* ── overlay/modal ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99;align-items:center;justify-content:center}
+.overlay.show{display:flex}
+.modal{background:var(--s1);border:1px solid var(--bd);border-radius:12px;width:100%;max-width:460px;display:flex;flex-direction:column}
+.modal-head{padding:14px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px}
+.modal-head h2{font-size:14px;font-weight:600;flex:1}
+.modal-close{background:none;border:none;color:var(--mu);font-size:17px;cursor:pointer;padding:2px 5px;border-radius:4px}
+.modal-close:hover{color:var(--tx);background:var(--btn)}
+.modal-body{padding:18px;display:flex;flex-direction:column;gap:13px}
+.modal-foot{padding:10px 18px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,.4);transition:opacity .3s}
+</style>
+</head>
+<body>
+
+<header>
+  <a id="back-link" href="index.html" data-i18n="nav_dashboard"></a>
+  <span class="sep">|</span>
+  <h1 data-i18n="env_title"></h1>
+  <span id="org-indicator" style="margin-left:auto;display:none;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--tx);padding:3px 10px;border:1px solid var(--bd);border-radius:20px;background:var(--s2)"></span>
+  <span id="env-label" style="display:none"></span>
+  <button id="lang-btn" onclick="toggleLang()" style="background:var(--btn);border:1px solid var(--bd);color:var(--tx);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px;margin-left:6px"></button>
+</header>
+
+<div id="toolbar">
+  <select id="sel-repo" onchange="onRepoChange()">
+    <option value="" data-i18n="env_repo_placeholder"></option>
+  </select>
+  <select id="sel-env" onchange="onEnvChange()" disabled>
+    <option value="" data-i18n="env_env_placeholder"></option>
+  </select>
+  <button class="btn btn-primary" id="btn-load" onclick="loadVars()" disabled data-i18n="env_load_btn"></button>
+  <div class="sep-v"></div>
+  <button class="btn btn-purple" id="btn-compare" onclick="compareWithExample()" disabled data-i18n="env_compare_btn"></button>
+</div>
+
+<main>
+  <!-- Left: variables table -->
+  <div>
+    <div class="panel" id="panel-vars">
+      <div class="panel-head">
+        <h2 data-i18n="env_vars_title"></h2>
+        <span class="badge badge-var" id="badge-count" style="display:none">0</span>
+      </div>
+      <div class="panel-body">
+        <div class="empty" id="vars-empty" data-i18n="env_empty"></div>
+        <div id="vars-table" style="display:none"></div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-compare" style="margin-top:16px;display:none">
+      <div class="panel-head">
+        <h2 data-i18n="env_compare_title"></h2>
+        <span class="badge badge-missing" id="badge-missing"></span>
+      </div>
+      <div class="panel-body" id="compare-body">
+        <div class="empty" data-i18n="loading"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: actions -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+
+    <!-- Add/edit var -->
+    <div class="panel">
+      <div class="panel-head"><h2 data-i18n="env_add_title"></h2></div>
+      <div class="form-body">
+        <div class="field">
+          <label data-i18n="env_key_label"></label>
+          <input id="new-key" placeholder="NUXT_API_BASE" autocomplete="off"/>
+        </div>
+        <div class="field">
+          <label data-i18n="env_val_label"></label>
+          <input id="new-val" placeholder="https://api.example.com" autocomplete="off"/>
+          <span class="hint" data-i18n="env_val_hint"></span>
+        </div>
+        <button class="btn btn-primary" id="btn-add" onclick="addVar()" disabled data-i18n="env_add_btn"></button>
+      </div>
+    </div>
+
+    <!-- gh CLI commands -->
+    <div class="panel">
+      <div class="panel-head"><h2 data-i18n="env_cli_title"></h2></div>
+      <div class="tabs">
+        <button class="tab active" id="tab-vars" onclick="showTab('vars')" data-i18n="env_tab_vars"></button>
+        <button class="tab" id="tab-secrets" onclick="showTab('secrets')" data-i18n="env_tab_secrets"></button>
+        <button class="tab" id="tab-bulk" onclick="showTab('bulk')" data-i18n="env_tab_bulk"></button>
+      </div>
+      <div class="form-body">
+
+        <div id="cli-vars-section">
+          <div class="field">
+            <label>Key</label>
+            <input id="cli-key" placeholder="NOMBRE_VAR" oninput="updateCliVars()"/>
+          </div>
+          <div class="field">
+            <label>Valor</label>
+            <input id="cli-val" placeholder="valor" oninput="updateCliVars()"/>
+          </div>
+          <div id="cli-vars-out" class="cli-box" style="margin-top:4px"></div>
+          <button class="btn btn-secondary" style="margin-top:8px;font-size:12px" onclick="copyCli('cli-vars-out')" data-i18n="env_cli_copy"></button>
+        </div>
+
+        <div id="cli-secrets-section" style="display:none">
+          <div class="field">
+            <label>Key</label>
+            <input id="cli-skey" placeholder="NUXT_OPENAI_API_KEY" oninput="updateCliSecrets()"/>
+          </div>
+          <p style="font-size:11px;color:var(--mu)" data-i18n="env_secrets_hint"></p>
+          <div id="cli-secrets-out" class="cli-box" style="margin-top:4px"></div>
+          <button class="btn btn-secondary" style="margin-top:8px;font-size:12px" onclick="copyCli('cli-secrets-out')" data-i18n="env_cli_copy"></button>
+        </div>
+
+        <div id="cli-bulk-section" style="display:none">
+          <p style="font-size:11px;color:var(--mu)" data-i18n="env_bulk_hint" data-i18n-html></p>
+          <div id="cli-bulk-out" class="cli-box" style="margin-top:8px"></div>
+          <button class="btn btn-secondary" style="margin-top:8px;font-size:12px" onclick="copyCli('cli-bulk-out')" data-i18n="env_cli_copy"></button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- Edit modal -->
+<div class="overlay" id="edit-modal" onclick="if(event.target===this)closeEdit()">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="edit-title"></h2>
+      <button class="modal-close" onclick="closeEdit()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label data-i18n="env_edit_key_label"></label><input id="edit-key" readonly style="opacity:.6"/></div>
+      <div class="field"><label data-i18n="env_edit_val_label"></label><input id="edit-val"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="closeEdit()" data-i18n="btn_cancel"></button>
+      <button class="btn btn-primary" id="edit-submit" onclick="submitEdit()" data-i18n="env_edit_submit"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm delete modal -->
+<div class="overlay" id="del-modal" onclick="if(event.target===this)closeDelete()">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 data-i18n="env_delete_modal_title"></h2>
+      <button class="modal-close" onclick="closeDelete()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p id="del-confirm-p"></p>
+      <p style="color:var(--mu);font-size:12px" data-i18n="env_delete_irreversible"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="closeDelete()" data-i18n="btn_cancel"></button>
+      <button class="btn btn-danger" id="del-submit" onclick="submitDelete()" data-i18n="env_delete_submit"></button>
+    </div>
+  </div>
+</div>
+
+<script src="i18n.js"></script>
+<script src="config.js" onerror="void 0"></script>
+<script>
+const GH = 'https://api.github.com';
+const LS_PAT = 'ci_pat', LS_REPOS = 'ci_repos';
+
+let currentRepo    = null;  // { owner, repo }
+let currentEnv     = null;  // 'Development' | 'Testing' | 'Production'
+let currentVars    = [];    // [{ name, value, type:'var'|'secret', updated_at }]
+let editContext    = null;  // { name }
+let deleteContext  = null;  // { name, type }
+
+// ── init ──────────────────────────────────────────────────
+function getPat()   { return window.CI_CONFIG?.pat   || localStorage.getItem(LS_PAT); }
+function getRepos() { return window.CI_CONFIG?.repos?.join('\n') || localStorage.getItem(LS_REPOS) || ''; }
+
+function init() {
+  applyI18n();
+  document.getElementById('vars-empty').textContent = t('env_empty');
+  document.getElementById('env-label').textContent = t('env_no_selection');
+  document.getElementById('cli-vars-out').innerHTML = `<span class="cli-comment">${t('env_cli_vars_placeholder')}</span>`;
+  document.getElementById('cli-secrets-out').innerHTML = `<span class="cli-comment">${t('env_cli_secrets_placeholder')}</span>`;
+  document.getElementById('cli-bulk-out').innerHTML = `<span class="cli-comment">${t('env_cli_bulk_placeholder')}</span>`;
+
+  if (!getPat()) {
+    showToast(t('env_no_pat'), 'warn', 5000);
+  }
+
+  const ctx = new URLSearchParams(location.search).get('ctx') || null;
+
+  // Update back link to return to dashboard with same context
+  const backLink = document.getElementById('back-link');
+  if (ctx) backLink.href = `dashboard.html?ctx=${encodeURIComponent(ctx)}`;
+  else backLink.href = 'index.html';
+
+  // Show org indicator
+  if (ctx) {
+    const ind = document.getElementById('org-indicator');
+    ind.style.display = 'flex';
+    if (ctx === 'all') {
+      ind.textContent = t('picker_all');
+    } else {
+      ind.innerHTML = `<img src="https://github.com/${encodeURIComponent(ctx)}.png?size=20" width="18" height="18" style="border-radius:3px"> ${esc(ctx)}`;
+    }
+  }
+
+  // Delegated listener for table action buttons (avoids onclick string injection)
+  document.body.addEventListener('click', e => {
+    const es = e.target.closest('.js-open-edit');
+    if (es) return openEdit(es.dataset.name, es.dataset.value);
+    const ds = e.target.closest('.js-open-delete');
+    if (ds) return openDelete(ds.dataset.name, ds.dataset.type);
+    const ps = e.target.closest('.js-prefill-secret');
+    if (ps) return prefillSecret(ps.dataset.name);
+    const pn = e.target.closest('.js-prefill-new');
+    if (pn) return prefillNew(pn.dataset.name);
+  });
+
+  // Show env-label in header
+  document.getElementById('env-label').style.display = '';
+
+  // Filter repos by context
+  const allRepos = getRepos().split('\n').map(s => s.trim())
+    .filter(s => s.includes('/') && !s.startsWith('//') && !s.startsWith('#'));
+  const repos = ctx && ctx !== 'all'
+    ? allRepos.filter(r => r.startsWith(ctx + '/'))
+    : allRepos;
+
+  const sel = document.getElementById('sel-repo');
+  repos.forEach(r => {
+    const o = document.createElement('option');
+    o.value = r; o.textContent = r; sel.appendChild(o);
+  });
+}
+
+async function onRepoChange() {
+  const val = document.getElementById('sel-repo').value;
+  currentRepo = val ? { owner: val.split('/')[0], repo: val.split('/')[1] } : null;
+  currentEnv = null;
+
+  const selEnv = document.getElementById('sel-env');
+  selEnv.innerHTML = `<option value="">${t('env_loading_envs')}</option>`;
+  selEnv.disabled = true;
+  updateToolbar();
+
+  if (!currentRepo) {
+    selEnv.innerHTML = `<option value="">${t('env_env_placeholder')}</option>`;
+    selEnv.disabled = false;
+    return;
+  }
+
+  try {
+    const { owner, repo } = currentRepo;
+    const d = await ghGet(`/repos/${owner}/${repo}/environments?per_page=100`);
+    const envs = (d.environments || []).sort((a, b) => a.name.localeCompare(b.name));
+    if (!envs.length) {
+      selEnv.innerHTML = `<option value="">${t('env_no_envs')}</option>`;
+      showToast(t('env_no_envs_toast'), 'warn', 4000);
+    } else {
+      selEnv.innerHTML = `<option value="">${t('env_env_placeholder')}</option>` +
+        envs.map(e => `<option value="${esc(e.name)}">${esc(e.name)}</option>`).join('');
+    }
+    selEnv.disabled = false;
+  } catch(e) {
+    selEnv.innerHTML = '<option value="">— Error —</option>';
+    selEnv.disabled = false;
+    const msg = e.message.includes('404') ? 'Repo sin environments o sin acceso' : e.message;
+    showToast(`❌ ${msg}`, 'error');
+  }
+}
+
+function onEnvChange() {
+  currentEnv = document.getElementById('sel-env').value || null;
+  updateToolbar();
+  updateCliBulk();
+}
+
+function updateToolbar() {
+  const ready = currentRepo && currentEnv;
+  document.getElementById('btn-load').disabled = !ready;
+  document.getElementById('btn-compare').disabled = !ready;
+  document.getElementById('btn-add').disabled = !ready;
+  const label = ready ? `${currentRepo.owner}/${currentRepo.repo} · ${currentEnv}` : t('env_no_selection');
+  document.getElementById('env-label').textContent = label;
+  if (ready) updateCliVars(), updateCliSecrets(), updateCliBulk();
+}
+
+// ── GitHub API ────────────────────────────────────────────
+function ghH() {
+  return { Authorization: `Bearer ${getPat()}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+}
+async function ghGet(path) {
+  const r = await fetch(`${GH}${path}`, { headers: ghH() });
+  if(r.status===429||(r.status===403&&r.headers.get('X-RateLimit-Remaining')==='0')){
+    const reset=r.headers.get('X-RateLimit-Reset');
+    const wait=reset?Math.max(0,parseInt(reset)*1000-Date.now()):60000;
+    throw new Error(`rate_limited:${Math.ceil(wait/1000)}`);
+  }
+  if (!r.ok) throw new Error(`GitHub ${r.status}: ${await r.text().catch(() => '')}`);
+  return r.json();
+}
+async function ghPost(path, body) {
+  const r = await fetch(`${GH}${path}`, { method: 'POST', headers: { ...ghH(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error(`GitHub ${r.status}: ${await r.text().catch(() => '')}`);
+  return r.status === 204 ? null : r.json().catch(() => null);
+}
+async function ghPatch(path, body) {
+  const r = await fetch(`${GH}${path}`, { method: 'PATCH', headers: { ...ghH(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error(`GitHub ${r.status}: ${await r.text().catch(() => '')}`);
+  return r.status === 204 ? null : r.json().catch(() => null);
+}
+async function ghDelete(path) {
+  const r = await fetch(`${GH}${path}`, { method: 'DELETE', headers: ghH() });
+  if (!r.ok) throw new Error(`GitHub ${r.status}: ${await r.text().catch(() => '')}`);
+}
+
+// ── load vars + secrets ───────────────────────────────────
+async function loadVars() {
+  if (!currentRepo || !currentEnv) return;
+  const { owner, repo } = currentRepo;
+  const envEncoded = encodeURIComponent(currentEnv);
+  document.getElementById('vars-empty').textContent = t('loading');
+  document.getElementById('vars-empty').style.display = 'block';
+  document.getElementById('vars-table').style.display = 'none';
+  document.getElementById('badge-count').style.display = 'none';
+
+  try {
+    // Fetch variables and secrets in parallel
+    const [varsData, secretsData] = await Promise.all([
+      (async () => {
+        let all = [], page = 1;
+        while (true) {
+          const d = await ghGet(`/repos/${owner}/${repo}/environments/${envEncoded}/variables?per_page=100&page=${page}`);
+          all = all.concat(d.variables || []);
+          if ((d.variables || []).length < 100) break;
+          page++;
+        }
+        return all;
+      })(),
+      (async () => {
+        let all = [], page = 1;
+        while (true) {
+          const d = await ghGet(`/repos/${owner}/${repo}/environments/${envEncoded}/secrets?per_page=100&page=${page}`);
+          all = all.concat(d.secrets || []);
+          if ((d.secrets || []).length < 100) break;
+          page++;
+        }
+        return all;
+      })()
+    ]);
+
+    currentVars = [
+      ...varsData.map(v => ({ ...v, type: 'var' })),
+      ...secretsData.map(s => ({ name: s.name, value: null, type: 'secret', updated_at: s.updated_at }))
+    ];
+    renderVarsTable(currentVars);
+  } catch(e) {
+    document.getElementById('vars-empty').textContent = `Error: ${e.message}`;
+    document.getElementById('vars-empty').style.display = 'block';
+  }
+}
+
+function renderVarsTable(items) {
+  const empty = document.getElementById('vars-empty');
+  const table = document.getElementById('vars-table');
+  const badge = document.getElementById('badge-count');
+
+  if (!items.length) {
+    empty.textContent = t('env_no_vars');
+    empty.style.display = 'block';
+    table.style.display = 'none';
+    badge.style.display = 'none';
+    return;
+  }
+
+  const varCount    = items.filter(i => i.type === 'var').length;
+  const secretCount = items.filter(i => i.type === 'secret').length;
+  badge.innerHTML = `<span class="badge badge-var">${varCount} var</span> <span class="badge badge-secret">${secretCount} secret</span>`;
+  badge.style.display = 'inline-flex';
+  badge.style.gap = '4px';
+  empty.style.display = 'none';
+
+  const rows = [...items].sort((a,b) => a.name.localeCompare(b.name)).map(v => {
+    const isSecret = v.type === 'secret';
+    const typeBadge = isSecret
+      ? `<span class="badge badge-secret" style="font-size:9px">secret</span>`
+      : `<span class="badge badge-var"    style="font-size:9px">var</span>`;
+    const valCell = isSecret
+      ? `<span class="val hidden" title="Los secrets no se pueden leer via API">••••••</span>`
+      : `<span class="val">${esc(v.value)}</span>`;
+    const editBtn = isSecret
+      ? `<button class="ia js-prefill-secret" data-name="${esc(v.name)}" title="Genera el comando gh CLI">CLI</button>`
+      : `<button class="ia js-open-edit" data-name="${esc(v.name)}" data-value="${esc(v.value||'')}">Editar</button>`;
+    return `<tr>
+      <td style="display:flex;align-items:center;gap:6px">${typeBadge}<span class="key">${esc(v.name)}</span></td>
+      <td>${valCell}</td>
+      <td style="white-space:nowrap;font-size:11px;color:var(--ne)">${relTime(v.updated_at)}</td>
+      <td class="row-actions">
+        ${editBtn}
+        <button class="ia del js-open-delete" data-name="${esc(v.name)}" data-type="${v.type}">Eliminar</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  table.innerHTML = `<table>
+    <thead><tr><th>${t('env_th_name')}</th><th>${t('env_th_value')}</th><th>${t('env_th_updated')}</th><th></th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+  table.style.display = 'block';
+}
+
+// ── add var ───────────────────────────────────────────────
+async function addVar() {
+  if (!currentRepo || !currentEnv) return;
+  const key = document.getElementById('new-key').value.trim();
+  const val = document.getElementById('new-val').value.trim();
+  if (!key) return showToast(t('env_name_req'), 'warn');
+
+  const { owner, repo } = currentRepo;
+  const envEncoded = encodeURIComponent(currentEnv);
+  const btn = document.getElementById('btn-add');
+  btn.disabled = true; btn.textContent = t('btn_saving');
+
+  try {
+    const exists = currentVars.find(v => v.name === key);
+    if (exists) {
+      await ghPatch(`/repos/${owner}/${repo}/environments/${envEncoded}/variables/${encodeURIComponent(key)}`, { name: key, value: val });
+    } else {
+      await ghPost(`/repos/${owner}/${repo}/environments/${envEncoded}/variables`, { name: key, value: val });
+    }
+    document.getElementById('new-key').value = '';
+    document.getElementById('new-val').value = '';
+    showToast(`✅ ${t(exists ? 'env_updated' : 'env_created')}: ${key}`);
+    await loadVars();
+  } catch(e) {
+    showToast(`❌ Error: ${e.message}`, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = t('env_add_btn');
+  }
+}
+
+// ── edit modal ────────────────────────────────────────────
+function openEdit(name, value) {
+  editContext = { name };
+  document.getElementById('edit-title').textContent = t('env_edit_title', {name});
+  document.getElementById('edit-key').value = name;
+  document.getElementById('edit-val').value = value;
+  document.getElementById('edit-modal').classList.add('show');
+}
+function closeEdit() { document.getElementById('edit-modal').classList.remove('show'); editContext = null; }
+
+async function submitEdit() {
+  if (!editContext || !currentRepo || !currentEnv) return;
+  const val = document.getElementById('edit-val').value.trim();
+  const { owner, repo } = currentRepo;
+  const envEncoded = encodeURIComponent(currentEnv);
+  const btn = document.getElementById('edit-submit');
+  btn.disabled = true; btn.textContent = t('btn_saving');
+  try {
+    await ghPatch(`/repos/${owner}/${repo}/environments/${envEncoded}/variables/${encodeURIComponent(editContext.name)}`, { name: editContext.name, value: val });
+    closeEdit();
+    showToast(`✅ ${t('env_updated')}: ${editContext.name}`);
+    await loadVars();
+  } catch(e) {
+    showToast(`❌ Error: ${e.message}`, 'error');
+    btn.disabled = false; btn.textContent = t('env_edit_submit');
+  }
+}
+
+// ── delete modal ──────────────────────────────────────────
+function openDelete(name, type = 'var') {
+  deleteContext = { name, type };
+  document.getElementById('del-confirm-p').innerHTML =
+    t('env_delete_confirm_p', {key: esc(name), env: esc(currentEnv)})
+      .replace('<code>', `<code style="background:var(--s2);padding:2px 6px;border-radius:4px;font-size:13px">`);
+  document.getElementById('del-modal').classList.add('show');
+}
+function closeDelete() { document.getElementById('del-modal').classList.remove('show'); deleteContext = null; }
+
+async function submitDelete() {
+  if (!deleteContext || !currentRepo || !currentEnv) return;
+  const { owner, repo } = currentRepo;
+  const envEncoded = encodeURIComponent(currentEnv);
+  const isSecret = deleteContext.type === 'secret';
+  const apiPath = isSecret
+    ? `/repos/${owner}/${repo}/environments/${envEncoded}/secrets/${encodeURIComponent(deleteContext.name)}`
+    : `/repos/${owner}/${repo}/environments/${envEncoded}/variables/${encodeURIComponent(deleteContext.name)}`;
+  const btn = document.getElementById('del-submit');
+  btn.disabled = true; btn.textContent = t('btn_saving');
+  try {
+    await ghDelete(apiPath);
+    closeDelete();
+    showToast(t('env_deleted', { o: isSecret ? 'o secret' : 'a variable', name: deleteContext.name }));
+    await loadVars();
+  } catch(e) {
+    showToast(`❌ Error: ${e.message}`, 'error');
+    btn.disabled = false; btn.textContent = t('env_delete_submit');
+  }
+}
+
+// ── compare with .env.example ─────────────────────────────
+async function compareWithExample() {
+  if (!currentRepo || !currentEnv) return;
+  const { owner, repo } = currentRepo;
+  const panel = document.getElementById('panel-compare');
+  const body  = document.getElementById('compare-body');
+  panel.style.display = 'block';
+  body.innerHTML = `<div class="empty">${t('env_compare_loading')}</div>`;
+
+  try {
+    // Fetch .env.example from repo
+    const d = await ghGet(`/repos/${owner}/${repo}/contents/.env.example`);
+    const raw = atob(d.content.replace(/\n/g, ''));
+
+    // Parse keys (skip commented-out optional ones); detect [secret] marker
+    const requiredKeys = [];   // [{ key, isSecret }]
+    let lastCommentWasSecret = false;
+    for (const line of raw.split('\n')) {
+      if (/^\s*#/.test(line)) {
+        lastCommentWasSecret = /\[secret\]/i.test(line);
+        continue;
+      }
+      if (!line.trim()) { lastCommentWasSecret = false; continue; }
+      const key = line.split('=')[0].trim();
+      if (key) requiredKeys.push({ key, isSecret: lastCommentWasSecret });
+      lastCommentWasSecret = false;
+    }
+
+    if (!requiredKeys.length) {
+      body.innerHTML = `<div class="empty">${t('env_no_required')}</div>`;
+      return;
+    }
+
+    // Ensure vars are loaded
+    if (!currentVars.length) await loadVars();
+
+    const setNames = new Set(currentVars.map(v => v.name));
+    let missing = 0;
+
+    const rows = requiredKeys.map(({ key, isSecret }) => {
+      const inGH = setNames.has(key);
+      if (!inGH) missing++;
+      const typeBadge = isSecret
+        ? `<span class="badge badge-secret" style="font-size:9px">secret</span>`
+        : `<span class="badge badge-var"    style="font-size:9px">var</span>`;
+      const addBtn = !inGH
+        ? isSecret
+          ? `<button class="ia js-prefill-secret" style="font-size:10px" data-name="${esc(key)}">CLI</button>`
+          : `<button class="ia js-prefill-new" style="font-size:10px" data-name="${esc(key)}">+ Agregar</button>`
+        : '';
+      return `<div class="compare-row">
+        <span class="status-dot ${inGH ? 'dot-ok' : 'dot-miss'}"></span>
+        ${typeBadge}
+        <span class="key">${esc(key)}</span>
+        <span class="tag ${inGH ? 'tag-ok' : 'tag-miss'}">${inGH ? t('compare_ok') : t('compare_missing')}</span>
+        ${addBtn}
+      </div>`;
+    }).join('');
+
+    // Keys in GH but not in .env.example
+    const requiredKeySet = new Set(requiredKeys.map(r => r.key));
+    const extras = currentVars.filter(v => !requiredKeySet.has(v.name));
+    const extraRows = extras.length ? extras.map(v => {
+      const typeBadge = v.type === 'secret'
+        ? `<span class="badge badge-secret" style="font-size:9px">secret</span>`
+        : `<span class="badge badge-var"    style="font-size:9px">var</span>`;
+      return `<div class="compare-row">
+        <span class="status-dot dot-unknown"></span>
+        ${typeBadge}
+        <span class="key">${esc(v.name)}</span>
+        <span class="tag tag-extra">${t('compare_extra')}</span>
+      </div>`;
+    }).join('') : '';
+
+    document.getElementById('badge-missing').textContent = t('env_missing_badge', { n: missing, s: missing !== 1 ? 's' : '' });
+    body.innerHTML = rows + (extraRows ? `<div style="border-top:1px solid var(--bd);margin-top:4px;padding-top:4px">${extraRows}</div>` : '');
+
+  } catch(e) {
+    body.innerHTML = `<div class="empty" style="color:var(--er)">${t('env_compare_error', { msg: e.message })}</div>`;
+  }
+}
+
+function prefillNew(key) {
+  document.getElementById('new-key').value = key;
+  document.getElementById('new-val').focus();
+}
+
+function prefillSecret(name) {
+  document.getElementById('cli-skey').value = name;
+  showTab('secrets');
+  updateCliSecrets();
+  document.getElementById('cli-skey').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ── cli generators ────────────────────────────────────────
+function showTab(tab) {
+  ['vars','secrets','bulk'].forEach(t => {
+    document.getElementById(`cli-${t}-section`).style.display = t === tab ? '' : 'none';
+    document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+  });
+}
+
+function cliBase() {
+  if (!currentRepo || !currentEnv) return null;
+  return { repo: `${currentRepo.owner}/${currentRepo.repo}`, env: currentEnv };
+}
+
+function updateCliVars() {
+  const key = document.getElementById('cli-key').value.trim();
+  const val = document.getElementById('cli-val').value.trim();
+  const b = cliBase();
+  const repo = b ? b.repo : 'my-org/my-repo';
+  const env  = b ? b.env  : 'Development';
+  const cmd  = key
+    ? `gh variable set ${key} \\\n  --env "${env}" \\\n  --repo "${repo}" \\\n  --body "${val || 'VALOR'}"`
+    : `<span class="cli-comment">${t('env_cli_vars_placeholder')}</span>`;
+  document.getElementById('cli-vars-out').innerHTML = cmd;
+}
+
+function updateCliSecrets() {
+  const key = document.getElementById('cli-skey').value.trim();
+  const b = cliBase();
+  const repo = b ? b.repo : 'my-org/my-repo';
+  const env  = b ? b.env  : 'Development';
+  const cmd  = key
+    ? `<span class="cli-comment"># el valor se lee de stdin para no quedar en el historial de shell</span>\ngh secret set ${key} \\\n  --env "${env}" \\\n  --repo "${repo}"  < <(read -s -p "Valor: " v; echo "$v")`
+    : `<span class="cli-comment">${t('env_cli_secrets_placeholder')}</span>`;
+  document.getElementById('cli-secrets-out').innerHTML = cmd;
+}
+
+function updateCliBulk() {
+  const b = cliBase();
+  if (!b) {
+    document.getElementById('cli-bulk-out').innerHTML = `<span class="cli-comment">${t('env_cli_bulk_placeholder')}</span>`;
+    return;
+  }
+  const repoShort = b.repo.split('/')[1];
+  const envLower  = b.env.toLowerCase();
+  document.getElementById('cli-bulk-out').innerHTML =
+`<span class="cli-comment"># 1. Creá el archivo de vars (en gitops-dashboard/envs/)</span>
+cp ../${repoShort}/.env.example envs/.env.${repoShort}.${envLower}
+
+<span class="cli-comment"># 2. Completá los valores en ese archivo</span>
+<span class="cli-comment"># 3. Ejecutá el sync desde gitops-dashboard/</span>
+./scripts/sync-env.sh ${b.repo} ${envLower}
+
+<span class="cli-comment"># Para secrets:</span>
+<span class="cli-comment"># creá envs/.env.${repoShort}.${envLower}.secrets</span>
+./scripts/sync-env.sh ${b.repo} ${envLower}`;
+}
+
+function copyCli(id) {
+  const text = document.getElementById(id).innerText;
+  navigator.clipboard.writeText(text).then(() => showToast(t('copied')));
+}
+
+// ── utils ─────────────────────────────────────────────────
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function relTime(iso) {
+  if (!iso) return '—';
+  const s = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s/60)}min`;
+  if (s < 86400) return `${Math.floor(s/3600)}h`;
+  return `${Math.floor(s/86400)}d`;
+}
+
+function showToast(msg, type = 'ok', duration = 3000) {
+  const bg = type === 'error' ? '#b91c1c' : type === 'warn' ? '#92400e' : '#238636';
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.style.background = bg;
+  t.style.color = '#fff';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, duration);
+}
+
+init();
+</script>
+</body>
+</html>
