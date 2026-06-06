@@ -139,23 +139,24 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <body>
 
 <header>
-  <a class="hbtn" href="index.html" style="color:var(--mu)">← Inicio</a>
+  <a class="hbtn" id="home-link" href="index.html" style="color:var(--mu)" data-i18n="nav_home"></a>
   <span id="org-indicator" style="display:none"></span>
   <div id="chips"></div>
   <span id="cd"></span>
-  <button class="hbtn" id="rbtn" onclick="loadAll()">↻ Refresh</button>
+  <button class="hbtn" id="rbtn" onclick="loadAll()" data-i18n="refresh"></button>
   <a class="hbtn" id="pr-link" href="prs.html" style="text-decoration:none">🔀 PRs</a>
   <a class="hbtn" id="env-link" href="env-manager.html" style="text-decoration:none">🔑 Env Manager</a>
   <button class="hbtn" id="notif-btn" onclick="toggleNotifications()" title="Notificaciones">🔔</button>
+  <button class="hbtn" id="lang-btn" onclick="toggleLang()"></button>
   <button class="hbtn" onclick="openSettings()">⚙</button>
 </header>
 
 <div id="filter-bar">
-  <button class="fbtn active" onclick="setFilter('all',this)">Todos</button>
-  <button class="fbtn" onclick="setFilter('failure',this)">❌ Fallos</button>
-  <button class="fbtn" onclick="setFilter('running',this)">🔄 Corriendo</button>
-  <button class="fbtn" onclick="setFilter('dispatch',this)">▶ Manuales</button>
-  <button class="fbtn" onclick="setFilter('schedule',this)">⏰ Scheduled</button>
+  <button class="fbtn active" onclick="setFilter('all',this)" data-i18n="filter_all"></button>
+  <button class="fbtn" onclick="setFilter('failure',this)" data-i18n="filter_failure"></button>
+  <button class="fbtn" onclick="setFilter('running',this)" data-i18n="filter_running"></button>
+  <button class="fbtn" onclick="setFilter('dispatch',this)" data-i18n="filter_dispatch"></button>
+  <button class="fbtn" onclick="setFilter('schedule',this)" data-i18n="filter_schedule"></button>
 </div>
 <div id="user-filter-bar"></div>
 
@@ -172,8 +173,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="modal-loading">Cargando parámetros…</div>
     </div>
     <div class="modal-foot">
-      <button class="cancel" onclick="closeDispatch()">Cancelar</button>
-      <button class="submit" id="dm-submit" onclick="submitDispatch()" disabled>Ejecutar</button>
+      <button class="cancel" onclick="closeDispatch()" data-i18n="btn_cancel"></button>
+      <button class="submit" id="dm-submit" onclick="submitDispatch()" disabled data-i18n="btn_submit"></button>
     </div>
   </div>
 </div>
@@ -194,14 +195,15 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <!-- Settings -->
 <div id="sov" onclick="closeSettings()"></div>
 <div id="sp">
-  <h2>Configuración</h2>
-  <div class="sp-field"><label>GitHub PAT</label><input id="s-pat" type="password" placeholder="ghp_..."/></div>
-  <div class="sp-field"><label>Repositorios</label><textarea id="s-repos"></textarea></div>
-  <button class="sbtn" onclick="saveSettings()">Guardar y recargar</button>
+  <h2 data-i18n="settings_title"></h2>
+  <div class="sp-field"><label data-i18n="settings_pat"></label><input id="s-pat" type="password" placeholder="ghp_..."/></div>
+  <div class="sp-field"><label data-i18n="settings_repos"></label><textarea id="s-repos"></textarea></div>
+  <button class="sbtn" onclick="saveSettings()" data-i18n="settings_save"></button>
   <hr style="border-color:var(--bd);margin:4px 0">
-  <button class="dbtn" onclick="resetAll()">Resetear configuración</button>
+  <button class="dbtn" onclick="resetAll()" data-i18n="settings_reset"></button>
 </div>
 
+<script src="i18n.js"></script>
 <script src="config.js" onerror="void 0"></script>
 <script>
 const LS_PAT='ci_pat', LS_REPOS='ci_repos', GH='https://api.github.com';
@@ -220,6 +222,7 @@ function init() {
   const ctx=new URLSearchParams(location.search).get('ctx');
   if(!ctx){ location.replace('index.html'); return; }
   currentContext=ctx;
+  applyI18n();
   updateOrgIndicator(ctx);
   document.getElementById('env-link').href=`env-manager.html?ctx=${encodeURIComponent(ctx)}`;
   document.getElementById('pr-link').href=`prs.html?ctx=${encodeURIComponent(ctx)}`;
@@ -231,7 +234,7 @@ function updateOrgIndicator(ctx){
   const el=document.getElementById('org-indicator');
   el.style.display='flex';
   if(ctx==='all'){
-    el.textContent='Todos';
+    el.textContent=t('picker_all');
   } else {
     el.innerHTML=`<img src="https://github.com/${encodeURIComponent(ctx)}.png?size=20" width="18" height="18"> ${ctx}`;
   }
@@ -254,11 +257,11 @@ function closeSettings(){document.getElementById('sp').style.display='none';docu
 function saveSettings(){
   const p=document.getElementById('s-pat').value.trim();
   const r=document.getElementById('s-repos').value.trim();
-  if(!p||!r) return alert('PAT y repos son requeridos');
+  if(!p||!r) return alert(t('settings_required'));
   localStorage.setItem(LS_PAT,p); localStorage.setItem(LS_REPOS,r);
   closeSettings(); loadAll();
 }
-function resetAll(){if(!confirm('Borrar configuración?'))return;localStorage.removeItem(LS_PAT);localStorage.removeItem(LS_REPOS);location.href='index.html';}
+function resetAll(){if(!confirm(t('settings_reset_confirm')))return;localStorage.removeItem(LS_PAT);localStorage.removeItem(LS_REPOS);location.href='index.html';}
 
 // ── github api ───────────────────────────────────────────
 function ghH(){return{Authorization:`Bearer ${getPat()}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};}
@@ -459,9 +462,9 @@ const EV_ORDER=['push','pull_request','workflow_dispatch','schedule','repository
 
 async function openDispatch(owner,repo,wfId,wfName,defaultRef,wfPath){
   dmContext={owner,repo,wfId,wfPath,inputs:[]};
-  document.getElementById('dm-title').textContent=`Ejecutar — ${wfName}`;
+  document.getElementById('dm-title').textContent=t('dm_title',{name:wfName});
   document.getElementById('dm-submit').disabled=true;
-  document.getElementById('dm-body').innerHTML='<div class="modal-loading">Detectando parámetros…</div>';
+  document.getElementById('dm-body').innerHTML=`<div class="modal-loading">${t('dm_loading')}</div>`;
   document.getElementById('dispatch-modal').classList.add('show');
   try {
     const yaml=await fetchWorkflowFile(owner,repo,wfPath);
@@ -473,7 +476,7 @@ async function openDispatch(owner,repo,wfId,wfName,defaultRef,wfPath){
 function closeDispatch(){document.getElementById('dispatch-modal').classList.remove('show');dmContext=null;}
 
 function renderDispatchForm(defaultRef,inputs){
-  const refField=`<div class="field"><label>Branch / Tag (ref)</label>
+  const refField=`<div class="field"><label>${t('dm_ref_label')}</label>
     <input id="dm-ref" value="${defaultRef}" placeholder="main"/></div>`;
   const inputFields=inputs.length===0?''
     :inputs.map(inp=>{
@@ -491,7 +494,7 @@ function renderDispatchForm(defaultRef,inputs){
       return `<div class="field"><label>${inp.name}${req}</label>${desc}<div class="field">${control}</div></div>`;
     }).join('');
   const noInputsNote=inputs.length===0
-    ?`<p style="color:var(--mu);font-size:12px">Este workflow no declara inputs de dispatch.<br>Solo se enviará el <strong>ref</strong>.</p>`:'';
+    ?`<p style="color:var(--mu);font-size:12px">${t('dm_no_inputs')}</p>`:'';
   document.getElementById('dm-body').innerHTML=refField+noInputsNote+inputFields;
   document.getElementById('dm-submit').disabled=false;
 }
@@ -499,22 +502,22 @@ function renderDispatchForm(defaultRef,inputs){
 async function submitDispatch(){
   if(!dmContext) return;
   const ref=document.getElementById('dm-ref')?.value.trim();
-  if(!ref) return alert('El ref es requerido');
+  if(!ref) return alert(t('dm_ref_required'));
   const inputs={};
   for(const inp of dmContext.inputs){
     const el=document.getElementById(`dmi-${inp.name}`);
     if(el) inputs[inp.name]=el.value;
   }
   const btn=document.getElementById('dm-submit');
-  btn.disabled=true; btn.textContent='Ejecutando…';
+  btn.disabled=true; btn.textContent=t('btn_submitting');
   try {
     await doDispatch(dmContext.owner,dmContext.repo,dmContext.wfId,ref,Object.keys(inputs).length?inputs:undefined);
     closeDispatch();
-    showToast(`✅ Workflow disparado en ${ref}`);
+    showToast(t('dm_success',{ref}));
     setTimeout(loadAll,3000);
   } catch(e){
-    alert(`Error: ${e.message}`);
-    btn.disabled=false; btn.textContent='Ejecutar';
+    showToast(t('dm_error',{msg:e.message}),'error');
+    btn.disabled=false; btn.textContent=t('btn_submit');
   }
 }
 
@@ -560,12 +563,12 @@ function parseDispatchInputs(yaml){
 
 // ── history modal ────────────────────────────────────────
 async function openHistory(owner,repo,wfId,wfName){
-  document.getElementById('hm-title').textContent=`Historial — ${wfName}`;
-  document.getElementById('hm-body').innerHTML='<div class="modal-loading">Cargando…</div>';
+  document.getElementById('hm-title').textContent=t('hm_title',{name:wfName});
+  document.getElementById('hm-body').innerHTML=`<div class="modal-loading">${t('hm_loading')}</div>`;
   document.getElementById('hist-modal').classList.add('show');
   try {
     const runs=await fetchHistory(owner,repo,wfId);
-    if(!runs.length){document.getElementById('hm-body').innerHTML='<div class="modal-loading">Sin ejecuciones</div>';return;}
+    if(!runs.length){document.getElementById('hm-body').innerHTML=`<div class="modal-loading">${t('hm_empty')}</div>`;return;}
     const rows=runs.map(r=>`<tr>
       <td class="rnum">#${r.run_number}</td>
       <td>${stBadge(r)}</td>
@@ -576,10 +579,10 @@ async function openHistory(owner,repo,wfId,wfName){
       <td><a href="${r.html_url}" target="_blank" style="color:var(--lk);font-size:11px">↗</a></td>
     </tr>`).join('');
     document.getElementById('hm-body').innerHTML=`<table>
-      <thead><tr><th>Run</th><th>Estado</th><th>Branch</th><th>Actor</th><th>Duración</th><th>Hace</th><th></th></tr></thead>
+      <thead><tr><th>${t('th_run')}</th><th>${t('th_status')}</th><th>${t('th_branch')}</th><th>${t('th_actor')}</th><th>${t('th_duration')}</th><th>${t('th_ago')}</th><th></th></tr></thead>
       <tbody>${rows}</tbody></table>`;
   } catch(e){
-    document.getElementById('hm-body').innerHTML=`<div class="modal-loading" style="color:var(--er)">Error: ${e.message}</div>`;
+    document.getElementById('hm-body').innerHTML=`<div class="modal-loading" style="color:var(--er)">${t('hm_error',{msg:e.message})}</div>`;
   }
 }
 function closeHistory(){document.getElementById('hist-modal').classList.remove('show');}
@@ -604,7 +607,7 @@ function updateChips(data){
     else if(['in_progress','queued','waiting'].includes(r.status)) wa++;
   }
   document.getElementById('chips').innerHTML=
-    `<span class="chip">${data.length} repos · ${total} workflows</span>`+
+    `<span class="chip">${t('chips',{repos:data.length,total})}</span>`+
     (ok?`<span class="chip ok">✅ ${ok}</span>`:'')+
     (er?`<span class="chip er">❌ ${er}</span>`:'')+
     (wa?`<span class="chip wa">🔄 ${wa}</span>`:'');
@@ -634,8 +637,8 @@ function renderRow(owner,repo,r){
     <td class="dur">${duration(r)}</td>
     <td class="rnum">#${r.run_number}</td>
     <td style="display:flex;gap:5px;align-items:center">
-      <button class="ibtn" onclick="openHistory('${owner}','${repo}',${r.workflow_id},'${nm}')">📋 Historial</button>
-      <button class="tbtn" onclick="openDispatch('${owner}','${repo}',${r.workflow_id},'${nm}','${r.head_branch}','${wfPath}')">▶ Ejecutar</button>
+      <button class="ibtn" onclick="openHistory('${owner}','${repo}',${r.workflow_id},'${nm}')">${t('btn_history')}</button>
+      <button class="tbtn" onclick="openDispatch('${owner}','${repo}',${r.workflow_id},'${nm}','${r.head_branch}','${wfPath}')">${t('btn_run')}</button>
     </td>
   </tr>`;
 }
@@ -644,7 +647,7 @@ function render(data,filter){
   const view=filterByContext(data);
   updateChips(view);
   const content=document.getElementById('content');
-  if(!view.length){content.innerHTML='<p style="color:var(--mu);padding:24px">Sin repos. Configurá en ⚙.</p>';return;}
+  if(!view.length){content.innerHTML=`<p style="color:var(--mu);padding:24px">${t('no_repos')}</p>`;return;}
 
   const errors=view.filter(d=>d.error);
   const errHtml=errors.map(({owner,repo,error})=>
@@ -665,7 +668,7 @@ function render(data,filter){
   }
 
   if(!byEvent.size&&!errors.length){
-    content.innerHTML=errHtml+'<p style="color:var(--mu);padding:24px">Sin runs para este filtro.</p>';
+    content.innerHTML=errHtml+`<p style="color:var(--mu);padding:24px">${t('no_runs')}</p>`;
     return;
   }
 
@@ -687,7 +690,7 @@ function render(data,filter){
           <span class="rstats">${repoStats(runs)}</span>
         </div>
         <table>
-          <thead><tr><th>Workflow</th><th>Branch</th><th>Actor</th><th>Estado</th><th>Duración</th><th>Run</th><th>Acciones</th></tr></thead>
+          <thead><tr><th>${t('th_workflow')}</th><th>${t('th_branch')}</th><th>${t('th_actor')}</th><th>${t('th_status')}</th><th>${t('th_duration')}</th><th>${t('th_run')}</th><th>${t('th_actions')}</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>`;

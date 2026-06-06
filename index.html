@@ -40,34 +40,41 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 .picker-card:hover .picker-all{border-color:#fff;color:var(--tx)}
 .picker-name{font-size:14px;color:var(--mu);font-weight:600;text-align:center;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .picker-loading{color:var(--mu);font-size:13px;text-align:center}
+
+/* ── lang toggle ── */
+#lang-btn{position:fixed;top:14px;right:16px;background:var(--btn);border:1px solid var(--bd);color:var(--tx);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px;z-index:50}
+#lang-btn:hover{background:var(--bth)}
 </style>
 </head>
 <body>
+
+<button id="lang-btn" onclick="toggleLang()"></button>
 
 <!-- Setup (no PAT) -->
 <div id="setup" style="display:none">
   <div class="sc">
     <h1>GitOps Dashboard</h1>
-    <p>Conecta tu GitHub PAT para ver y disparar workflows desde el browser.</p>
+    <p data-i18n="setup_desc"></p>
     <div class="field">
-      <label>GitHub Personal Access Token</label>
+      <label data-i18n="setup_pat_label"></label>
       <input id="setup-pat" type="password" placeholder="ghp_..." autocomplete="off"/>
-      <span class="hint">Scopes: <code>repo</code> + <code>workflow</code>. <a href="https://github.com/settings/tokens/new" target="_blank">Generar →</a></span>
+      <span class="hint" data-i18n="setup_pat_hint" data-i18n-html></span>
     </div>
     <div class="field">
-      <label>Repositorios (uno por línea, owner/repo)</label>
-      <textarea id="setup-repos" placeholder="LenoxHR/ci-workflow&#10;LenoxHR/PWA-VUEJS"></textarea>
+      <label data-i18n="setup_repos_label"></label>
+      <textarea id="setup-repos"></textarea>
     </div>
-    <button onclick="saveSetup()">Acceder</button>
+    <button onclick="saveSetup()" data-i18n="setup_submit"></button>
   </div>
 </div>
 
 <!-- Picker -->
 <div id="picker">
-  <h2>¿Desde dónde trabajás hoy?</h2>
-  <div id="picker-cards"><p class="picker-loading">Cargando…</p></div>
+  <h2 data-i18n="picker_heading"></h2>
+  <div id="picker-cards"><p class="picker-loading" data-i18n="picker_loading"></p></div>
 </div>
 
+<script src="i18n.js"></script>
 <script src="config.js" onerror="void 0"></script>
 <script>
 const LS_PAT='ci_pat', LS_REPOS='ci_repos', GH='https://api.github.com';
@@ -86,12 +93,14 @@ function uniqueOwners(){ return [...new Set(parseRepos().map(r=>r.owner))]; }
 function saveSetup(){
   const p=document.getElementById('setup-pat').value.trim();
   const r=document.getElementById('setup-repos').value.trim();
-  if(!p||!r) return alert('PAT y repos son requeridos');
+  if(!p||!r) return alert(t('setup_required'));
   localStorage.setItem(LS_PAT,p); localStorage.setItem(LS_REPOS,r);
   showPicker();
 }
 
 function init(){
+  applyI18n();
+  document.getElementById('setup-repos').placeholder=t('setup_repos_placeholder');
   if(!getPat()||!getRepos()){
     document.getElementById('setup').style.display='flex';
   } else {
@@ -112,7 +121,6 @@ async function showPicker(){
 
   const cards=document.getElementById('picker-cards');
 
-  // Render cards with initial letter placeholder
   cards.innerHTML=owners.map((o,i)=>{
     const color=CTX_COLORS[i%CTX_COLORS.length];
     return `<div class="picker-card" onclick="goTo('${encodeURIComponent(o)}')">
@@ -121,7 +129,6 @@ async function showPicker(){
     </div>`;
   }).join('')+buildAllCard(owners);
 
-  // Load real avatars async (no auth needed for GitHub avatar URLs)
   owners.forEach((owner,i)=>{
     const img=new Image();
     img.onload=()=>{
@@ -141,7 +148,7 @@ function buildAllCard(owners){
     :`⊕`;
   return `<div class="picker-card" onclick="goTo('all')">
     <div class="picker-all">${inner}</div>
-    <span class="picker-name">Todos</span>
+    <span class="picker-name">${t('picker_all')}</span>
   </div>`;
 }
 

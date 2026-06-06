@@ -91,24 +91,26 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <body>
 
 <header>
-  <a class="hbtn" id="back-link" href="index.html">← GitOps Dashboard</a>
+  <a class="hbtn" id="back-link" href="index.html" data-i18n="nav_dashboard"></a>
   <h1>PR Board</h1>
   <span id="org-indicator" style="display:none"></span>
   <div id="chips"></div>
-  <button class="hbtn" id="rbtn" onclick="loadAll()">↻ Refresh</button>
+  <button class="hbtn" id="rbtn" onclick="loadAll()" data-i18n="refresh"></button>
+  <button class="hbtn" id="lang-btn" onclick="toggleLang()"></button>
 </header>
 
 <div id="filter-bar">
-  <button class="fbtn active" onclick="setFilter('all',this)">Todos</button>
-  <button class="fbtn" onclick="setFilter('failing',this)">❌ Failing checks</button>
-  <button class="fbtn" onclick="setFilter('ready',this)">✅ Ready to merge</button>
-  <button class="fbtn" onclick="setFilter('draft',this)">📝 Draft</button>
-  <button class="fbtn" onclick="setFilter('review',this)">👀 Necesitan review</button>
+  <button class="fbtn active" onclick="setFilter('all',this)" data-i18n="filter_all"></button>
+  <button class="fbtn" onclick="setFilter('failing',this)" data-i18n="filter_failing"></button>
+  <button class="fbtn" onclick="setFilter('ready',this)" data-i18n="filter_ready"></button>
+  <button class="fbtn" onclick="setFilter('draft',this)" data-i18n="filter_draft"></button>
+  <button class="fbtn" onclick="setFilter('review',this)" data-i18n="filter_review"></button>
 </div>
 <div id="user-filter-bar"></div>
 
-<main id="content"><div id="loading">Cargando PRs…</div></main>
+<main id="content"><div id="loading"></div></main>
 
+<script src="i18n.js"></script>
 <script src="config.js" onerror="void 0"></script>
 <script>
 const LS_PAT='ci_pat', LS_REPOS='ci_repos', GH='https://api.github.com';
@@ -126,7 +128,8 @@ function init(){
   const ctx=new URLSearchParams(location.search).get('ctx');
   if(!ctx){ location.replace('index.html'); return; }
   currentContext=ctx;
-
+  applyI18n();
+  document.getElementById('content').querySelector('#loading').textContent=t('pr_loading');
   document.getElementById('back-link').href=`dashboard.html?ctx=${encodeURIComponent(ctx)}`;
   const ind=document.getElementById('org-indicator');
   ind.style.display='flex';
@@ -271,7 +274,7 @@ function render(data, filter){
     const errHtml=errors.map(({owner,repo,error})=>
       `<div style="color:var(--er);font-size:12px;padding:8px 14px;border:1px solid rgba(248,81,73,.3);border-radius:6px;margin-bottom:8px">⚠ <strong>${owner}/${repo}</strong>: ${error}</div>`
     ).join('');
-    content.innerHTML=errHtml+`<p style="color:var(--mu);padding:24px">No hay PRs abiertos.</p>`;
+    content.innerHTML=errHtml+`<p style="color:var(--mu);padding:24px">${t('pr_none')}</p>`;
     return;
   }
 
@@ -286,7 +289,7 @@ function render(data, filter){
         <span class="rcount">${filtered.length} PR${filtered.length!==1?'s':''}</span>
       </div>
       <table>
-        <thead><tr><th>#</th><th>Título</th><th>Autor</th><th>Branch</th><th>Checks</th><th>Reviewers</th><th>Actualizado</th><th></th></tr></thead>
+        <thead><tr><th>${t('th_num')}</th><th>${t('th_title_col')}</th><th>${t('th_author')}</th><th>${t('th_branch')}</th><th>${t('th_checks')}</th><th>${t('th_reviewers')}</th><th>${t('th_updated')}</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
@@ -297,7 +300,7 @@ function render(data, filter){
     `<div style="color:var(--er);font-size:12px;padding:8px 14px;border:1px solid rgba(248,81,73,.3);border-radius:6px;margin-bottom:8px">⚠ <strong>${owner}/${repo}</strong>: ${error}</div>`
   ).join('');
 
-  content.innerHTML=errHtml+(html||`<p style="color:var(--mu);padding:24px">Sin PRs para este filtro.</p>`);
+  content.innerHTML=errHtml+(html||`<p style="color:var(--mu);padding:24px">${t('pr_none_filter')}</p>`);
 }
 
 function renderPRRow(owner,repo,pr){
@@ -323,15 +326,16 @@ function renderPRRow(owner,repo,pr){
     <td data-sha="${sha}">${checks?renderChecksDots(checks):`<span class="ck-loading">…</span>`}</td>
     <td><div class="reviewers">${reviewers||'<span style="color:var(--ne);font-size:11px">—</span>'}</div></td>
     <td class="rtime">${relTime(pr.updated_at)}</td>
-    <td><a class="view-btn" href="${pr.html_url}" target="_blank">↗ Ver</a></td>
+    <td><a class="view-btn" href="${pr.html_url}" target="_blank">${t('btn_view')}</a></td>
   </tr>`;
 }
 
 function renderChecksDots(checks){
   if(!checks||checks.total===0) return `<span class="cs-none">—</span>`;
-  if(checks.er>0) return `<span class="cs-er">❌ ${checks.er} fallo${checks.er!==1?'s':''}</span>`+(checks.wa?` <span class="cs-wa">🔄 ${checks.wa}</span>`:'');
-  if(checks.wa>0) return `<span class="cs-wa">🔄 ${checks.wa} corriendo</span>`;
-  return `<span class="cs-ok">✅ ${checks.ok}</span>`;
+  const s=n=>n!==1?'s':'';
+  if(checks.er>0) return `<span class="cs-er">${t('checks_failing',{n:checks.er,s:s(checks.er)})}</span>`+(checks.wa?` <span class="cs-wa">${t('checks_running',{n:checks.wa})}</span>`:'');
+  if(checks.wa>0) return `<span class="cs-wa">${t('checks_running',{n:checks.wa})}</span>`;
+  return `<span class="cs-ok">${t('checks_ok',{n:checks.ok})}</span>`;
 }
 
 function renderChips(data){
@@ -342,10 +346,11 @@ function renderChips(data){
     const c=checksCache[pr.head.sha];
     return c&&c.total>0&&c.er===0&&c.wa===0&&!pr.draft;
   }).length;
+  const s=n=>n!==1?'s':'';
   document.getElementById('chips').innerHTML=
-    `<span class="chip">${total} PR${total!==1?'s':''} abiertos</span>`+
-    (failing?`<span class="chip er">❌ ${failing} con fallos</span>`:'')+
-    (ready?`<span class="chip ok">✅ ${ready} listos</span>`:'');
+    `<span class="chip">${t('pr_count',{n:total,s:s(total)})}</span>`+
+    (failing?`<span class="chip er">${t('pr_failing',{n:failing})}</span>`:'')+
+    (ready?`<span class="chip ok">${t('pr_ready',{n:ready,s:s(ready)})}</span>`:'');
 }
 
 // ── utils ─────────────────────────────────────────────────
