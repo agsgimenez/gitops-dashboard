@@ -3,12 +3,12 @@
 # sync-env.sh — Sincroniza variables de entorno locales → GitHub Environments
 # =============================================================================
 # Uso:
-#   ./scripts/sync-env.sh <repo> <environment>
+#   ./scripts/sync-env.sh <owner/repo> <environment> [env-dir]
 #
 # Ejemplos:
-#   ./scripts/sync-env.sh usuarios development
-#   ./scripts/sync-env.sh PWA-VUEJS testing
-#   ./scripts/sync-env.sh lenoxsolution production
+#   ./scripts/sync-env.sh my-org/my-repo development
+#   ./scripts/sync-env.sh my-org/my-repo testing
+#   ./scripts/sync-env.sh my-org/my-repo production envs/
 #
 # Archivos que lee desde el directorio actual o --env-dir (gitignored localmente):
 #   .env.<repo>.<environment>         → vars no sensibles → gh variable set
@@ -18,41 +18,39 @@
 #
 # Estructura de archivos recomendada en este mismo directorio:
 #   envs/
-#     .env.usuarios.development
-#     .env.usuarios.development.secrets
-#     .env.PWA-VUEJS.testing
+#     .env.<repo>.development
+#     .env.<repo>.development.secrets
+#     .env.<repo>.testing
 #     ...  (todos gitignored via .gitignore)
 # =============================================================================
 set -euo pipefail
 
-ORG="LenoxHR"
-REPO="${1:-}"
+FULL_REPO="${1:-}"
 ENVIRONMENT="${2:-}"
 ENV_DIR="${3:-envs}"   # carpeta donde buscar los archivos
 
 # --- Validar argumentos ---
-if [[ -z "$REPO" || -z "$ENVIRONMENT" ]]; then
-  echo "Uso: $0 <repo> <environment> [env-dir]"
+if [[ -z "$FULL_REPO" || -z "$ENVIRONMENT" ]]; then
+  echo "Uso: $0 <owner/repo> <environment> [env-dir]"
   echo ""
-  echo "Repos disponibles:"
-  echo "  usuarios, PWA-VUEJS, MaynarCheckpoint, lenoxsolution, ci-workflow"
-  echo ""
-  echo "Environments disponibles:"
-  echo "  development, testing, production"
+  echo "Environments soportados: development, testing, production"
+  echo "  (o cualquier nombre — se usa tal cual como GitHub Environment)"
   exit 1
 fi
+
+if [[ "$FULL_REPO" != */* ]]; then
+  echo "ERROR: el repo debe tener el formato owner/repo (ej: my-org/my-repo)"
+  exit 1
+fi
+
+REPO="${FULL_REPO#*/}"
 
 case "$ENVIRONMENT" in
   development) GH_ENV="Development" ;;
   testing)     GH_ENV="Testing" ;;
   production)  GH_ENV="Production" ;;
-  *)
-    echo "ERROR: environment inválido '${ENVIRONMENT}'. Opciones: development | testing | production"
-    exit 1
-    ;;
+  *)           GH_ENV="$ENVIRONMENT" ;;
 esac
-
-FULL_REPO="${ORG}/${REPO}"
 VARS_FILE="${ENV_DIR}/.env.${REPO}.${ENVIRONMENT}"
 SECRETS_FILE="${ENV_DIR}/.env.${REPO}.${ENVIRONMENT}.secrets"
 
@@ -89,7 +87,7 @@ upload_entries() {
     fi
 
     if [[ "$mode" == "secret" ]]; then
-      gh secret set "$key" --env "$GH_ENV" --repo "$FULL_REPO" --body "$value"
+      printf '%s' "$value" | gh secret set "$key" --env "$GH_ENV" --repo "$FULL_REPO"
       echo "  [secret] ✓ $key"
     else
       gh variable set "$key" --env "$GH_ENV" --repo "$FULL_REPO" --body "$value"

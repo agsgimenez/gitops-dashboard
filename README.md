@@ -107,7 +107,7 @@ GitOps Dashboard has no backend. All GitHub API requests run directly from your 
 `scripts/sync-env.sh` uploads a local `.env` file to a GitHub Environment via the `gh` CLI:
 
 ```bash
-./scripts/sync-env.sh <repo> <environment> [envs-dir]
+./scripts/sync-env.sh <owner/repo> <environment> [envs-dir]
 # Reads  envs/.env.<repo>.<environment>          → gh variable set
 # Reads  envs/.env.<repo>.<environment>.secrets   → gh secret set
 ```
