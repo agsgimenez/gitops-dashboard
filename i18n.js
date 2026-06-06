@@ -9,7 +9,7 @@ window.I18N = {
     setup_submit: 'Acceder',
     setup_required: 'PAT y repos son requeridos',
     setup_pat_hint: 'Scopes: <code>repo</code> + <code>workflow</code>. <a href="https://github.com/settings/tokens/new" target="_blank">Generar →</a>',
-    setup_repos_placeholder: 'LenoxHR/ci-workflow\nmy-org/repo',
+    setup_repos_placeholder: 'my-org/my-repo\nmy-org/another-repo',
 
     picker_heading: '¿Desde dónde trabajás hoy?',
     picker_loading: 'Cargando…',
@@ -133,7 +133,7 @@ window.I18N = {
     setup_submit: 'Sign in',
     setup_required: 'PAT and repos are required',
     setup_pat_hint: 'Scopes: <code>repo</code> + <code>workflow</code>. <a href="https://github.com/settings/tokens/new" target="_blank">Generate →</a>',
-    setup_repos_placeholder: 'LenoxHR/ci-workflow\nmy-org/repo',
+    setup_repos_placeholder: 'my-org/my-repo\nmy-org/another-repo',
 
     picker_heading: 'Where are you working today?',
     picker_loading: 'Loading…',

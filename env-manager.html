@@ -707,7 +707,7 @@ function updateCliVars() {
   const key = document.getElementById('cli-key').value.trim();
   const val = document.getElementById('cli-val').value.trim();
   const b = cliBase();
-  const repo = b ? b.repo : 'LenoxHR/REPO';
+  const repo = b ? b.repo : 'my-org/my-repo';
   const env  = b ? b.env  : 'Development';
   const cmd  = key
     ? `gh variable set ${key} \\\n  --env "${env}" \\\n  --repo "${repo}" \\\n  --body "${val || 'VALOR'}"`
@@ -718,7 +718,7 @@ function updateCliVars() {
 function updateCliSecrets() {
   const key = document.getElementById('cli-skey').value.trim();
   const b = cliBase();
-  const repo = b ? b.repo : 'LenoxHR/REPO';
+  const repo = b ? b.repo : 'my-org/my-repo';
   const env  = b ? b.env  : 'Development';
   const cmd  = key
     ? `<span class="cli-comment"># el valor se lee de stdin para no quedar en el historial de shell</span>\ngh secret set ${key} \\\n  --env "${env}" \\\n  --repo "${repo}"  < <(read -s -p "Valor: " v; echo "$v")`
