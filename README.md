@@ -1,112 +1,135 @@
 # GitOps Dashboard
 
-Dashboard estático (HTML puro, sin build ni servidor) para monitorear y operar GitHub Actions workflows desde el browser.
+Too many tabs open to monitor GitHub Actions across multiple orgs? GitOps Dashboard gives you a single pane of glass for your GitHub operations — workflows, PRs, environments — without leaving the browser.
 
-## Páginas
+- Monitor CI workflows across all your repos and orgs
+- Trigger `workflow_dispatch` with declared inputs, without leaving the dashboard
+- Track open PRs with live check runs and reviewer status
+- Manage GitHub Environment variables and secrets from a visual UI
+- No backend. No build step. No install required.
 
-| Archivo | Rol |
-|---------|-----|
-| `index.html` | Home — setup de PAT + workspace switcher de org/usuario |
-| `dashboard.html?ctx=<org>` | Dashboard de CI filtrado al contexto elegido |
-| `prs.html?ctx=<org>` | PR Board — PRs abiertos con check runs por repo |
-| `env-manager.html?ctx=<org>` | Gestor de variables y secrets de GitHub Environments |
+Built with plain HTML, CSS and JavaScript. Runs directly in the browser.
 
-El flujo de navegación es: `index.html` → `dashboard.html?ctx=MyOrg` → `env-manager.html?ctx=MyOrg`.
+## Screenshots
 
-## Características
+> _Add screenshots after setup_
 
-- **Workspace switcher**: al abrir `index.html` se muestran los orgs/usuarios con sus avatares reales de GitHub; un click entra directo al dashboard de ese contexto
-- **Multi-org**: si el config tiene repos de múltiples owners, el selector aparece; si hay uno solo, entra directo
-- **Monitor de workflows**: agrupado por tipo de evento (push, PR, manual, schedule) con chips de estado
-- **Historial**: últimas 10 ejecuciones por workflow en un modal
-- **Dispatch**: ejecutar workflows con inputs declarados en el YAML, sin salir del dashboard
-- **PR Board**: PRs abiertos por repo con check runs en tiempo real (carga progresiva), filtros por failing/ready/draft/needs review
-- **Notificaciones del browser**: aviso cuando un workflow en ejecución completa; botón 🔔 en el header para activar
-- **Env Manager**: ver variables y secrets de GitHub Environments (environments cargados dinámicamente desde la API), agregar/editar/eliminar variables, generar comandos `gh` CLI para secrets, comparar con `.env.example`
-- **Auto-refresh**: countdown de 30 segundos
+| Dashboard | PR Board | Env Manager |
+|-----------|----------|-------------|
+| ![Dashboard](docs/dashboard.png) | ![PR Board](docs/pr-board.png) | ![Env Manager](docs/env-manager.png) |
+
+## Pages
+
+| File | Role |
+|------|------|
+| `index.html` | Home — PAT setup + workspace switcher |
+| `dashboard.html?ctx=<org>` | CI dashboard filtered to selected context |
+| `prs.html?ctx=<org>` | PR Board — open PRs with live check runs |
+| `env-manager.html?ctx=<org>` | GitHub Environments variable and secret manager |
 
 ## Setup
 
-### 1. Configurar repos
+### 1. Clone and configure repos
 
-Copiá `config.example.js` a `config.js` y editalo:
+Copy `config.example.js` to `config.js` and list your repos:
 
 ```js
 window.CI_CONFIG = {
-  
   repos: [
-    // Org 1
     "my-org/repo-a",
     "my-org/repo-b",
-    // Org 2
     "another-org/repo-c",
-    // Personal
     "my-user/personal-repo",
   ]
 };
 ```
 
-`config.js` está en `.gitignore` — nunca se commitea.
+`config.js` is in `.gitignore` — it is never committed.
 
-### 2. PAT requerido
+### 2. Generate a GitHub PAT
 
-Generá un token en [github.com/settings/tokens](https://github.com/settings/tokens) con scopes:
+Go to [github.com/settings/tokens](https://github.com/settings/tokens) and create a token with:
 
-| Scope | Para qué |
+| Scope | Used for |
 |-------|----------|
-| `repo` | Leer workflows, environments, variables y secrets |
-| `workflow` | Disparar `workflow_dispatch` |
+| `repo` | Read workflows, environments, variables and secrets |
+| `workflow` | Trigger `workflow_dispatch` |
 
-### 3. Abrir
+The token is entered once in the UI and stored in your browser's `localStorage`. It is never written to any file.
 
-Abrí `index.html` directamente en el browser. No requiere servidor ni `npm install`.
+### 3. Open
+
+Open `index.html` directly in the browser — no server, no `npm install`.
 
 ```powershell
-start "C:\ruta\gitops-dashboard\index.html"
+start "C:\path\to\gitops-dashboard\index.html"
 ```
 
-## Env Manager
+## Features
 
-Desde el dashboard → botón **🔑 Env Manager** (pasa el contexto actual automáticamente).
+### Workflow Dashboard
 
-- **Repo → environments**: al seleccionar un repo los environments se cargan desde la GitHub API (`GET /repos/{owner}/{repo}/environments`)
-- **Variables**: valores visibles, editables directo en UI
-- **Secrets**: solo se muestran los nombres con `••••••`. Botón **CLI** genera el comando `gh secret set` para copiarlo
-- **Comparar con `.env.example`**: detecta keys declaradas en el contrato que faltan en el environment
+- Workspace switcher: pick an org or user to scope the dashboard; real GitHub avatars load automatically
+- Workflows grouped by trigger type (push, PR, manual, schedule) with status chips
+- Run history modal — last 10 executions per workflow
+- Dispatch: run `workflow_dispatch` workflows with their declared inputs
+- Browser notifications: get an OS alert when a running workflow completes (🔔 toggle in header)
+- Auto-refresh every 30 seconds
+
+### PR Board
+
+- All open PRs across your repos in one view
+- Check runs load progressively in the background — PRs appear immediately
+- Filter by: failing checks / ready to merge / draft / needs review
+- Shows labels (with real colors), reviewer avatars, and `head → base` branch flow
+
+### Environment Manager
+
+- Environments loaded dynamically from the GitHub API — no hardcoded list
+- Variables: visible values, editable directly in the UI
+- Secrets: names shown as `••••••`, CLI button generates the `gh secret set` command
+- Compare with `.env.example` to detect keys declared in the contract but missing in the environment
+
+## Security
+
+GitOps Dashboard has no backend. All GitHub API requests run directly from your browser using the PAT you provide.
+
+- Your token is stored in `localStorage` only — never written to files, never sent to any third-party service
+- No telemetry, no analytics, no external requests beyond `api.github.com` and `github.com` (avatars)
+- Open source — you can read every line before running it
+- `workflow_dispatch` is gated by the `workflow` scope; you control which token you create and what scopes you grant
+- Secrets values are never fetched — only names are retrieved via the GitHub API
 
 ## Scripts
 
-`scripts/sync-env.sh` — sube un archivo `.env` completo a un GitHub Environment via `gh` CLI:
+`scripts/sync-env.sh` uploads a local `.env` file to a GitHub Environment via the `gh` CLI:
 
 ```bash
 ./scripts/sync-env.sh <repo> <environment> [envs-dir]
-# Lee  envs/.env.<repo>.<environment>         → gh variable set
-# Lee  envs/.env.<repo>.<environment>.secrets  → gh secret set
+# Reads  envs/.env.<repo>.<environment>          → gh variable set
+# Reads  envs/.env.<repo>.<environment>.secrets   → gh secret set
 ```
 
-Ejemplo:
-```bash
-./scripts/sync-env.sh my-repo production
-```
+Files in `envs/` are gitignored.
 
-Los archivos en `envs/` están gitignoreados.
-
-## Estructura
+## Project structure
 
 ```
 gitops-dashboard/
-├── index.html            # Home: setup + workspace switcher de org
-├── dashboard.html        # CI dashboard (recibe ?ctx=<org>)
-├── env-manager.html      # Gestor de environments (recibe ?ctx=<org>)
-├── config.example.js     # Template de configuración
-├── config.js             # Configuración real (gitignored)
+├── index.html            # Home: PAT setup + workspace switcher
+├── dashboard.html        # CI dashboard (?ctx=<org>)
+├── prs.html              # PR board (?ctx=<org>)
+├── env-manager.html      # Environment manager (?ctx=<org>)
+├── config.example.js     # Config template
+├── config.js             # Your config (gitignored)
 ├── scripts/
-│   └── sync-env.sh       # Upload bulk vars/secrets via gh CLI
-├── envs/                 # Archivos .env locales (gitignored)
+│   └── sync-env.sh       # Bulk upload vars/secrets via gh CLI
+├── envs/                 # Local .env files (gitignored)
+├── docs/                 # Public landing page (GitHub Pages)
 ├── LICENSE
 └── README.md
 ```
 
-## Licencia
+## License
 
 MIT
