@@ -419,6 +419,8 @@ function buildUserPills(data){
 }
 
 // ── ui helpers ───────────────────────────────────────────
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
 function relTime(iso){
   if(!iso) return '—';
   const s=Math.floor((Date.now()-new Date(iso))/1000);
