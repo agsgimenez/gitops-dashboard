@@ -71,6 +71,7 @@ start "C:\path\to\gitops-dashboard\index.html"
 
 - Workspace switcher: pick an org or user to scope the dashboard; real GitHub avatars load automatically
 - Workflows grouped by trigger type (push, PR, manual, schedule) with status chips
+- Filter by actor: after data loads a pill row appears with every user who triggered a run — click one to scope the view
 - Run history modal — last 10 executions per workflow
 - Dispatch: run `workflow_dispatch` workflows with their declared inputs
 - Browser notifications: get an OS alert when a running workflow completes (🔔 toggle in header)
@@ -80,7 +81,8 @@ start "C:\path\to\gitops-dashboard\index.html"
 
 - All open PRs across your repos in one view
 - Check runs load progressively in the background — PRs appear immediately
-- Filter by: failing checks / ready to merge / draft / needs review
+- Filter by status: failing checks / ready to merge / draft / needs review
+- Filter by user: pill row shows every author and requested reviewer — select one to see only PRs that involve them
 - Shows labels (with real colors), reviewer avatars, and `head → base` branch flow
 
 ### Environment Manager
