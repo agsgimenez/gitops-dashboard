@@ -1,0 +1,4 @@
+config.js
+
+# Archivos de entorno con valores reales (locales, nunca al repo)
+envs/

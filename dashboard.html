@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GitOps Dashboard</title>
+<style>
+:root{
+  --bg:#0d1117;--s1:#161b22;--s2:#1c2128;--bd:#30363d;
+  --tx:#e6edf3;--mu:#8b949e;--lk:#58a6ff;
+  --ok:#3fb950;--er:#f85149;--wa:#d29922;--ne:#6e7681;
+  --btn:#21262d;--bth:#30363d;--gr:#238636;--grh:#2ea043;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;min-height:100vh}
+
+/* ── header ── */
+header{padding:11px 24px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px;position:sticky;top:0;background:var(--bg);z-index:20}
+header h1{font-size:14px;font-weight:700;flex:0 0 auto}
+#chips{display:flex;gap:6px;flex:1;padding:0 10px;flex-wrap:wrap}
+.chip{font-size:11px;padding:3px 9px;border-radius:20px;border:1px solid var(--bd);color:var(--mu);background:var(--btn);font-weight:500}
+.chip.ok{color:var(--ok);border-color:rgba(63,185,80,.3);background:rgba(63,185,80,.08)}
+.chip.er{color:var(--er);border-color:rgba(248,81,73,.3);background:rgba(248,81,73,.08)}
+.chip.wa{color:var(--wa);border-color:rgba(210,153,34,.3);background:rgba(210,153,34,.08)}
+#cd{color:var(--mu);font-size:12px;white-space:nowrap}
+.hbtn{background:var(--btn);border:1px solid var(--bd);color:var(--tx);padding:4px 11px;border-radius:6px;cursor:pointer;font-size:12px;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.hbtn:hover{background:var(--bth)}.hbtn:disabled{opacity:.5;cursor:default}
+
+/* ── org indicator ── */
+#org-indicator{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--tx);padding:3px 10px;border:1px solid var(--bd);border-radius:20px;background:var(--s2);white-space:nowrap}
+#org-indicator img{border-radius:3px}
+
+/* ── filters ── */
+#filter-bar{padding:8px 24px;border-bottom:1px solid var(--bd);display:flex;gap:6px}
+.fbtn{background:transparent;border:1px solid transparent;color:var(--mu);padding:3px 11px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:500}
+.fbtn:hover{background:var(--btn);color:var(--tx)}
+.fbtn.active{background:var(--s2);border-color:var(--bd);color:var(--tx)}
+
+/* ── main ── */
+main{padding:20px 24px;max-width:1100px}
+#loading{text-align:center;padding:60px;color:var(--mu)}
+
+/* ── event-type sections ── */
+details{margin-bottom:14px}
+details[open] summary .caret{transform:rotate(90deg)}
+summary{list-style:none;cursor:pointer;user-select:none;padding:9px 16px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;display:flex;align-items:center;gap:10px;margin-bottom:8px}
+summary::-webkit-details-marker{display:none}
+.caret{color:var(--mu);font-size:11px;transition:transform .15s;flex:0 0 auto}
+.ev-title{font-size:13px;font-weight:700;flex:1;display:flex;align-items:center;gap:8px}
+.rstats{display:flex;gap:6px;font-size:11px}
+.rs-ok{color:var(--ok)}.rs-er{color:var(--er)}.rs-wa{color:var(--wa)}.rs-ne{color:var(--ne)}
+
+/* ── repo sub-sections ── */
+.repo-sub{margin-bottom:10px}
+.repo-sub-header{font-size:11px;font-weight:600;color:var(--mu);padding:5px 12px;border-left:2px solid var(--bd);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.repo-sub-header a{color:var(--lk);text-decoration:none;font-family:monospace}.repo-sub-header a:hover{text-decoration:underline}
+.repo-sub-header .rstats{margin-left:auto}
+
+table{width:100%;border-collapse:collapse;background:var(--s1);border:1px solid var(--bd);border-radius:8px;overflow:hidden}
+th{text-align:left;padding:6px 11px;font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd);background:var(--s2);white-space:nowrap}
+td{padding:8px 11px;border-bottom:1px solid var(--bd);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.wfn a{color:var(--tx);text-decoration:none;font-weight:500;font-size:13px}.wfn a:hover{color:var(--lk)}
+
+/* ── status / misc cells ── */
+.branch{background:var(--btn);border:1px solid var(--bd);border-radius:12px;padding:2px 8px;font-size:11px;color:var(--mu);font-family:monospace;white-space:nowrap}
+.actor{display:flex;align-items:center;gap:5px;color:var(--mu);font-size:12px;white-space:nowrap}
+.actor img{border-radius:50%}
+.st{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;white-space:nowrap}
+.st.success{color:var(--ok)}.st.failure,.st.timed_out,.st.startup_failure{color:var(--er)}
+.st.in_progress,.st.queued,.st.waiting,.st.requested,.st.pending{color:var(--wa)}
+.st.cancelled,.st.skipped,.st.neutral,.st.action_required{color:var(--ne)}
+.dur{color:var(--mu);font-size:12px;font-family:monospace;white-space:nowrap}
+.rnum{color:var(--ne);font-size:11px;font-family:monospace}
+.ibtn{background:var(--btn);border:1px solid var(--bd);color:var(--mu);padding:3px 9px;border-radius:6px;cursor:pointer;font-size:11px;white-space:nowrap}
+.ibtn:hover{background:var(--bth);color:var(--tx)}
+.tbtn{background:var(--gr);border:1px solid rgba(63,185,80,.4);color:#fff;padding:3px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;white-space:nowrap}
+.tbtn:hover{background:var(--grh)}.tbtn:disabled{opacity:.4;cursor:default;background:var(--btn);border-color:var(--bd);color:var(--mu)}
+
+/* ── event pills ── */
+.ev{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+.ev-push{background:rgba(88,166,255,.12);color:#58a6ff;border:1px solid rgba(88,166,255,.25)}
+.ev-pull_request{background:rgba(210,153,34,.12);color:#d29922;border:1px solid rgba(210,153,34,.25)}
+.ev-schedule{background:rgba(163,113,247,.12);color:#a371f7;border:1px solid rgba(163,113,247,.25)}
+.ev-workflow_dispatch{background:rgba(63,185,80,.12);color:#3fb950;border:1px solid rgba(63,185,80,.25)}
+.ev-other{background:rgba(139,148,158,.12);color:#8b949e;border:1px solid rgba(139,148,158,.25)}
+
+/* ── dispatch modal ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99;align-items:center;justify-content:center}
+.overlay.show{display:flex}
+.modal{background:var(--s1);border:1px solid var(--bd);border-radius:12px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px}
+.modal-head h2{font-size:15px;font-weight:600;flex:1}
+.modal-close{background:none;border:none;color:var(--mu);font-size:18px;cursor:pointer;padding:2px 6px;border-radius:4px}
+.modal-close:hover{color:var(--tx);background:var(--btn)}
+.modal-body{padding:20px;display:flex;flex-direction:column;gap:14px}
+.modal-foot{padding:12px 20px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px}
+.modal-foot .cancel{background:var(--btn);border:1px solid var(--bd);color:var(--tx);padding:6px 16px;border-radius:6px;cursor:pointer;font-size:13px}
+.modal-foot .cancel:hover{background:var(--bth)}
+.modal-foot .submit{background:var(--gr);border:none;color:#fff;padding:6px 20px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500}
+.modal-foot .submit:hover{background:var(--grh)}.modal-foot .submit:disabled{opacity:.5;cursor:default}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:11px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.4px}
+.field input,.field select{background:var(--s2);border:1px solid var(--bd);color:var(--tx);padding:7px 10px;border-radius:6px;font-size:13px;width:100%}
+.field input:focus,.field select:focus{outline:none;border-color:var(--lk)}
+.input-req{color:var(--er);margin-left:2px}
+.input-desc{color:var(--mu);font-size:11px;margin-top:3px}
+.modal-loading{text-align:center;padding:24px;color:var(--mu)}
+
+/* ── history modal ── */
+#hist-modal .modal{max-width:700px}
+#hist-modal table{border-radius:0;border:none}
+#hist-modal th{background:var(--s2)}
+#hist-modal td{font-size:12px}
+
+/* ── settings ── */
+#sp{display:none;position:fixed;top:0;right:0;height:100vh;width:360px;background:var(--s1);border-left:1px solid var(--bd);padding:24px;overflow-y:auto;z-index:100;flex-direction:column;gap:18px}
+#sp h2{font-size:15px;font-weight:600}
+.sp-field{display:flex;flex-direction:column;gap:6px}
+.sp-field label{font-size:11px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.5px}
+.sp-field input,.sp-field textarea{background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 10px;border-radius:6px;font-size:13px;width:100%}
+.sp-field textarea{resize:vertical;min-height:200px;font-family:monospace}
+.sbtn{background:var(--gr);border:none;color:#fff;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500}
+.sbtn:hover{background:var(--grh)}
+.dbtn{background:transparent;border:1px solid var(--er);color:var(--er);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px}
+.dbtn:hover{background:rgba(248,81,73,.1)}
+#sov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
+</style>
+</head>
+<body>
+
+<header>
+  <a class="hbtn" href="index.html" style="color:var(--mu)">← Inicio</a>
+  <span id="org-indicator" style="display:none"></span>
+  <div id="chips"></div>
+  <span id="cd"></span>
+  <button class="hbtn" id="rbtn" onclick="loadAll()">↻ Refresh</button>
+  <a class="hbtn" id="pr-link" href="prs.html" style="text-decoration:none">🔀 PRs</a>
+  <a class="hbtn" id="env-link" href="env-manager.html" style="text-decoration:none">🔑 Env Manager</a>
+  <button class="hbtn" id="notif-btn" onclick="toggleNotifications()" title="Notificaciones">🔔</button>
+  <button class="hbtn" onclick="openSettings()">⚙</button>
+</header>
+
+<div id="filter-bar">
+  <button class="fbtn active" onclick="setFilter('all',this)">Todos</button>
+  <button class="fbtn" onclick="setFilter('failure',this)">❌ Fallos</button>
+  <button class="fbtn" onclick="setFilter('running',this)">🔄 Corriendo</button>
+  <button class="fbtn" onclick="setFilter('dispatch',this)">▶ Manuales</button>
+  <button class="fbtn" onclick="setFilter('schedule',this)">⏰ Scheduled</button>
+</div>
+
+<main id="content"><div id="loading">Cargando…</div></main>
+
+<!-- Dispatch modal -->
+<div class="overlay" id="dispatch-modal" onclick="if(event.target===this)closeDispatch()">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="dm-title">Ejecutar workflow</h2>
+      <button class="modal-close" onclick="closeDispatch()">✕</button>
+    </div>
+    <div class="modal-body" id="dm-body">
+      <div class="modal-loading">Cargando parámetros…</div>
+    </div>
+    <div class="modal-foot">
+      <button class="cancel" onclick="closeDispatch()">Cancelar</button>
+      <button class="submit" id="dm-submit" onclick="submitDispatch()" disabled>Ejecutar</button>
+    </div>
+  </div>
+</div>
+
+<!-- History modal -->
+<div class="overlay" id="hist-modal" onclick="if(event.target===this)closeHistory()">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="hm-title">Historial</h2>
+      <button class="modal-close" onclick="closeHistory()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0" id="hm-body">
+      <div class="modal-loading">Cargando…</div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings -->
+<div id="sov" onclick="closeSettings()"></div>
+<div id="sp">
+  <h2>Configuración</h2>
+  <div class="sp-field"><label>GitHub PAT</label><input id="s-pat" type="password" placeholder="ghp_..."/></div>
+  <div class="sp-field"><label>Repositorios</label><textarea id="s-repos"></textarea></div>
+  <button class="sbtn" onclick="saveSettings()">Guardar y recargar</button>
+  <hr style="border-color:var(--bd);margin:4px 0">
+  <button class="dbtn" onclick="resetAll()">Resetear configuración</button>
+</div>
+
+<script src="config.js" onerror="void 0"></script>
+<script>
+const LS_PAT='ci_pat', LS_REPOS='ci_repos', GH='https://api.github.com';
+let lastData=[], currentFilter='all', cdVal=30, cdTimer=null;
+let dmContext=null;
+let currentContext='all';
+let prevStatuses=new Map(); // key: owner/repo/wfId → status string
+
+// ── config ───────────────────────────────────────────────
+function getPat()   { return window.CI_CONFIG?.pat   || localStorage.getItem(LS_PAT); }
+function getRepos() { return window.CI_CONFIG?.repos?.join('\n') || localStorage.getItem(LS_REPOS); }
+
+function init() {
+  if(!getPat()||!getRepos()){ location.replace('index.html'); return; }
+  const ctx=new URLSearchParams(location.search).get('ctx');
+  if(!ctx){ location.replace('index.html'); return; }
+  currentContext=ctx;
+  updateOrgIndicator(ctx);
+  document.getElementById('env-link').href=`env-manager.html?ctx=${encodeURIComponent(ctx)}`;
+  document.getElementById('pr-link').href=`prs.html?ctx=${encodeURIComponent(ctx)}`;
+  initNotifications();
+  loadAll(); startCountdown();
+}
+
+function updateOrgIndicator(ctx){
+  const el=document.getElementById('org-indicator');
+  el.style.display='flex';
+  if(ctx==='all'){
+    el.textContent='Todos';
+  } else {
+    el.innerHTML=`<img src="https://github.com/${encodeURIComponent(ctx)}.png?size=20" width="18" height="18"> ${ctx}`;
+  }
+}
+
+// ── context filter ───────────────────────────────────────
+function filterByContext(data){
+  if(currentContext==='all') return data;
+  return data.filter(d=>d.owner===currentContext);
+}
+
+// ── settings ─────────────────────────────────────────────
+function openSettings(){
+  document.getElementById('s-pat').value=localStorage.getItem(LS_PAT)||'';
+  document.getElementById('s-repos').value=localStorage.getItem(LS_REPOS)||'';
+  document.getElementById('sp').style.display='flex';
+  document.getElementById('sov').style.display='block';
+}
+function closeSettings(){document.getElementById('sp').style.display='none';document.getElementById('sov').style.display='none';}
+function saveSettings(){
+  const p=document.getElementById('s-pat').value.trim();
+  const r=document.getElementById('s-repos').value.trim();
+  if(!p||!r) return alert('PAT y repos son requeridos');
+  localStorage.setItem(LS_PAT,p); localStorage.setItem(LS_REPOS,r);
+  closeSettings(); loadAll();
+}
+function resetAll(){if(!confirm('Borrar configuración?'))return;localStorage.removeItem(LS_PAT);localStorage.removeItem(LS_REPOS);location.href='index.html';}
+
+// ── github api ───────────────────────────────────────────
+function ghH(){return{Authorization:`Bearer ${getPat()}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};}
+async function ghGet(path){
+  const r=await fetch(`${GH}${path}`,{headers:ghH()});
+  if(r.status===401){localStorage.removeItem(LS_PAT);location.replace('index.html');}
+  if(!r.ok) throw new Error(`GitHub ${r.status}`);
+  return r.json();
+}
+async function fetchRuns(owner,repo){
+  const d=await ghGet(`/repos/${owner}/${repo}/actions/runs?per_page=100`);
+  const seen=new Map();
+  for(const r of d.workflow_runs) if(!seen.has(r.workflow_id)) seen.set(r.workflow_id,r);
+  return Array.from(seen.values());
+}
+async function fetchHistory(owner,repo,wfId){
+  const d=await ghGet(`/repos/${owner}/${repo}/actions/runs?workflow_id=${wfId}&per_page=10`);
+  return d.workflow_runs;
+}
+async function fetchWorkflowFile(owner,repo,path){
+  const d=await ghGet(`/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`);
+  return atob(d.content.replace(/\n/g,''));
+}
+async function doDispatch(owner,repo,wfId,ref,inputs){
+  const r=await fetch(`${GH}/repos/${owner}/${repo}/actions/workflows/${wfId}/dispatches`,{
+    method:'POST', headers:{...ghH(),'Content-Type':'application/json'},
+    body:JSON.stringify({ref,inputs:inputs||{}})
+  });
+  if(r.status===401){localStorage.removeItem(LS_PAT);location.replace('index.html');}
+  if(!r.ok&&r.status!==204) throw new Error(`${r.status}: ${await r.text().catch(()=>'')}`);
+}
+
+// ── notifications ────────────────────────────────────────
+function initNotifications(){
+  const btn=document.getElementById('notif-btn');
+  if(!('Notification' in window)){btn.style.display='none';return;}
+  updateNotifBtn();
+}
+
+function updateNotifBtn(){
+  const btn=document.getElementById('notif-btn');
+  const p=Notification.permission;
+  btn.title=p==='granted'?'Notificaciones activas':p==='denied'?'Notificaciones bloqueadas':'Activar notificaciones';
+  btn.style.opacity=p==='granted'?'1':'0.5';
+}
+
+function toggleNotifications(){
+  if(!('Notification' in window)) return;
+  if(Notification.permission==='granted'){
+    // show a test notification
+    new Notification('GitOps Dashboard',{body:'Notificaciones activas ✅',icon:'https://github.githubassets.com/favicons/favicon.png'});
+    return;
+  }
+  Notification.requestPermission().then(updateNotifBtn);
+}
+
+function trackAndNotify(newData){
+  if(!('Notification' in window)||Notification.permission!=='granted') return;
+  const running=new Set(['in_progress','queued','waiting','requested','pending']);
+  const finished={'success':'✅','failure':'❌','timed_out':'❌','startup_failure':'❌','cancelled':'⊘'};
+
+  for(const{owner,repo,runs}of newData){
+    for(const r of runs){
+      const key=`${owner}/${repo}/${r.workflow_id}`;
+      const prev=prevStatuses.get(key);
+      const curr=r.conclusion||r.status;
+      // notify when a run transitions from running → completed
+      if(prev&&running.has(prev)&&r.conclusion&&finished[r.conclusion]!==undefined){
+        const icon=finished[r.conclusion];
+        new Notification(`${icon} ${r.name}`,{
+          body:`${owner}/${repo} · ${r.head_branch}`,
+          icon:`https://github.com/${encodeURIComponent(owner)}.png?size=40`,
+          tag:`${key}-${r.run_number}`,
+        });
+      }
+      prevStatuses.set(key,curr);
+    }
+  }
+}
+
+// ── load ─────────────────────────────────────────────────
+function parseRepos(){
+  return (getRepos()||'').split('\n').map(s=>s.trim())
+    .filter(s=>s.includes('/')&&!s.startsWith('//')&&!s.startsWith('#'))
+    .map(s=>{const[o,r]=s.split('/');return{owner:o,repo:r};});
+}
+async function loadAll(){
+  const btn=document.getElementById('rbtn');
+  btn.textContent='↻ …'; btn.disabled=true;
+  const repos=parseRepos().filter(r=>currentContext==='all'||r.owner===currentContext);
+  lastData=await Promise.all(repos.map(async({owner,repo})=>{
+    try{return{owner,repo,runs:await fetchRuns(owner,repo)};}
+    catch(e){return{owner,repo,runs:[],error:e.message};}
+  }));
+  trackAndNotify(lastData);
+  render(lastData,currentFilter);
+  btn.textContent='↻ Refresh'; btn.disabled=false;
+  resetCd();
+}
+
+// ── countdown ────────────────────────────────────────────
+function startCountdown(){
+  clearInterval(cdTimer);
+  cdTimer=setInterval(()=>{cdVal--;document.getElementById('cd').textContent=`↻ ${cdVal}s`;if(cdVal<=0){cdVal=30;loadAll();}},1000);
+}
+function resetCd(){cdVal=30;document.getElementById('cd').textContent=`↻ ${cdVal}s`;}
+
+// ── filter ───────────────────────────────────────────────
+function setFilter(f,el){
+  currentFilter=f;
+  document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  render(lastData,f);
+}
+function filterRuns(runs,f){
+  if(f==='all') return runs;
+  if(f==='failure') return runs.filter(r=>['failure','timed_out','startup_failure'].includes(r.conclusion));
+  if(f==='running') return runs.filter(r=>['in_progress','queued','waiting'].includes(r.status));
+  if(f==='dispatch') return runs.filter(r=>r.event==='workflow_dispatch');
+  if(f==='schedule') return runs.filter(r=>r.event==='schedule');
+  return runs;
+}
+
+// ── ui helpers ───────────────────────────────────────────
+function relTime(iso){
+  if(!iso) return '—';
+  const s=Math.floor((Date.now()-new Date(iso))/1000);
+  if(s<60) return `${s}s`;if(s<3600) return `${Math.floor(s/60)}min`;
+  if(s<86400) return `${Math.floor(s/3600)}h`;return `${Math.floor(s/86400)}d`;
+}
+function duration(r){
+  if(!r.created_at) return '—';
+  const end=r.status==='completed'?new Date(r.updated_at):new Date();
+  const s=Math.floor((end-new Date(r.created_at))/1000);
+  if(s<60) return `${s}s`;if(s<3600) return `${Math.floor(s/60)}m ${s%60}s`;
+  return `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m`;
+}
+function stBadge(r){
+  const v=r.conclusion??r.status??'unknown';
+  const ic={success:'✅',failure:'❌',timed_out:'❌',startup_failure:'❌',
+    in_progress:'🔄',queued:'⏳',waiting:'⏳',requested:'⏳',pending:'⏳',
+    cancelled:'⊘',skipped:'⊘',neutral:'⊘',action_required:'⚠️'};
+  const cl=['success','failure','timed_out','startup_failure'].includes(v)?v
+    :['in_progress','queued','waiting','requested','pending'].includes(v)?'in_progress':'neutral';
+  return `<span class="st ${cl}">${ic[v]??'○'} ${v}</span>`;
+}
+function evPill(ev){
+  const lb={push:'push',pull_request:'PR',schedule:'schedule',workflow_dispatch:'manual',repository_dispatch:'dispatch'};
+  const cl=ev==='push'?'push':ev==='pull_request'?'pull_request':ev==='schedule'?'schedule':ev==='workflow_dispatch'?'workflow_dispatch':'other';
+  return `<span class="ev ev-${cl}">${lb[ev]??ev}</span>`;
+}
+function actorCell(r){
+  if(!r.actor) return '<span class="actor">—</span>';
+  const img=r.actor.avatar_url?`<img src="${r.actor.avatar_url}&s=20" width="16" height="16" alt=""> `:'';
+  return `<span class="actor">${img}${r.actor.login}</span>`;
+}
+
+// ── dispatch modal ───────────────────────────────────────
+const EV_ORDER=['push','pull_request','workflow_dispatch','schedule','repository_dispatch'];
+
+async function openDispatch(owner,repo,wfId,wfName,defaultRef,wfPath){
+  dmContext={owner,repo,wfId,wfPath,inputs:[]};
+  document.getElementById('dm-title').textContent=`Ejecutar — ${wfName}`;
+  document.getElementById('dm-submit').disabled=true;
+  document.getElementById('dm-body').innerHTML='<div class="modal-loading">Detectando parámetros…</div>';
+  document.getElementById('dispatch-modal').classList.add('show');
+  try {
+    const yaml=await fetchWorkflowFile(owner,repo,wfPath);
+    const inputs=parseDispatchInputs(yaml);
+    dmContext.inputs=inputs;
+    renderDispatchForm(defaultRef,inputs);
+  } catch(e){ renderDispatchForm(defaultRef,[]); }
+}
+function closeDispatch(){document.getElementById('dispatch-modal').classList.remove('show');dmContext=null;}
+
+function renderDispatchForm(defaultRef,inputs){
+  const refField=`<div class="field"><label>Branch / Tag (ref)</label>
+    <input id="dm-ref" value="${defaultRef}" placeholder="main"/></div>`;
+  const inputFields=inputs.length===0?''
+    :inputs.map(inp=>{
+      const req=inp.required?`<span class="input-req">*</span>`:'';
+      const desc=inp.description?`<div class="input-desc">${inp.description}</div>`:'';
+      let control;
+      if(inp.type==='boolean'){
+        control=`<select id="dmi-${inp.name}"><option value="true"${inp.default==='true'?' selected':''}>true</option><option value="false"${inp.default!=='true'?' selected':''}>false</option></select>`;
+      } else if(inp.type==='choice'&&inp.options.length){
+        const opts=inp.options.map(o=>`<option value="${o}"${o===inp.default?' selected':''}>${o}</option>`).join('');
+        control=`<select id="dmi-${inp.name}">${opts}</select>`;
+      } else {
+        control=`<input id="dmi-${inp.name}" type="text" value="${inp.default||''}" placeholder="${inp.description||inp.name}"/>`;
+      }
+      return `<div class="field"><label>${inp.name}${req}</label>${desc}<div class="field">${control}</div></div>`;
+    }).join('');
+  const noInputsNote=inputs.length===0
+    ?`<p style="color:var(--mu);font-size:12px">Este workflow no declara inputs de dispatch.<br>Solo se enviará el <strong>ref</strong>.</p>`:'';
+  document.getElementById('dm-body').innerHTML=refField+noInputsNote+inputFields;
+  document.getElementById('dm-submit').disabled=false;
+}
+
+async function submitDispatch(){
+  if(!dmContext) return;
+  const ref=document.getElementById('dm-ref')?.value.trim();
+  if(!ref) return alert('El ref es requerido');
+  const inputs={};
+  for(const inp of dmContext.inputs){
+    const el=document.getElementById(`dmi-${inp.name}`);
+    if(el) inputs[inp.name]=el.value;
+  }
+  const btn=document.getElementById('dm-submit');
+  btn.disabled=true; btn.textContent='Ejecutando…';
+  try {
+    await doDispatch(dmContext.owner,dmContext.repo,dmContext.wfId,ref,Object.keys(inputs).length?inputs:undefined);
+    closeDispatch();
+    showToast(`✅ Workflow disparado en ${ref}`);
+    setTimeout(loadAll,3000);
+  } catch(e){
+    alert(`Error: ${e.message}`);
+    btn.disabled=false; btn.textContent='Ejecutar';
+  }
+}
+
+// ── yaml input parser ────────────────────────────────────
+function parseDispatchInputs(yaml){
+  const lines=yaml.split('\n');
+  let i=0,found=false;
+  for(;i<lines.length;i++){
+    if(/^\s*workflow_dispatch\s*:/.test(lines[i])){found=true;break;}
+  }
+  if(!found) return [];
+  const wdIndent=lines[i].search(/\S/); i++;
+  let inputsFound=false;
+  for(;i<lines.length;i++){
+    const ind=lines[i].search(/\S/);
+    if(ind<=wdIndent&&lines[i].trim()) return [];
+    if(/^\s*inputs\s*:/.test(lines[i])){inputsFound=true;break;}
+  }
+  if(!inputsFound) return [];
+  const inputsIndent=lines[i].search(/\S/); i++;
+  const result=[];
+  let cur=null,curInd=-1,inOpts=false;
+  for(;i<lines.length;i++){
+    const line=lines[i];
+    if(!line.trim()) continue;
+    const ind=line.search(/\S/);
+    const trim=line.trim();
+    if(ind<=inputsIndent&&trim) break;
+    if(ind===inputsIndent+2||(cur===null&&ind>inputsIndent)){
+      const m=trim.match(/^([\w-]+)\s*:/);
+      if(m){cur={name:m[1],description:'',required:false,default:'',type:'string',options:[]};curInd=ind;inOpts=false;result.push(cur);}
+    } else if(cur&&ind>curInd){
+      if(/^description\s*:/.test(trim)) cur.description=trim.replace(/^description\s*:\s*/,'').replace(/^['"]|['"]$/g,'');
+      else if(/^required\s*:/.test(trim)) cur.required=/true/i.test(trim);
+      else if(/^default\s*:/.test(trim)) cur.default=trim.replace(/^default\s*:\s*/,'').replace(/^['"]|['"]$/g,'');
+      else if(/^type\s*:/.test(trim)){cur.type=trim.replace(/^type\s*:\s*/,'').trim();inOpts=false;}
+      else if(/^options\s*:/.test(trim)) inOpts=true;
+      else if(inOpts&&/^-/.test(trim)) cur.options.push(trim.slice(1).trim().replace(/^['"]|['"]$/g,''));
+    }
+  }
+  return result;
+}
+
+// ── history modal ────────────────────────────────────────
+async function openHistory(owner,repo,wfId,wfName){
+  document.getElementById('hm-title').textContent=`Historial — ${wfName}`;
+  document.getElementById('hm-body').innerHTML='<div class="modal-loading">Cargando…</div>';
+  document.getElementById('hist-modal').classList.add('show');
+  try {
+    const runs=await fetchHistory(owner,repo,wfId);
+    if(!runs.length){document.getElementById('hm-body').innerHTML='<div class="modal-loading">Sin ejecuciones</div>';return;}
+    const rows=runs.map(r=>`<tr>
+      <td class="rnum">#${r.run_number}</td>
+      <td>${stBadge(r)}</td>
+      <td><span class="branch">${r.head_branch}</span></td>
+      <td>${actorCell(r)}</td>
+      <td class="dur">${duration(r)}</td>
+      <td class="dur">${relTime(r.created_at)}</td>
+      <td><a href="${r.html_url}" target="_blank" style="color:var(--lk);font-size:11px">↗</a></td>
+    </tr>`).join('');
+    document.getElementById('hm-body').innerHTML=`<table>
+      <thead><tr><th>Run</th><th>Estado</th><th>Branch</th><th>Actor</th><th>Duración</th><th>Hace</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table>`;
+  } catch(e){
+    document.getElementById('hm-body').innerHTML=`<div class="modal-loading" style="color:var(--er)">Error: ${e.message}</div>`;
+  }
+}
+function closeHistory(){document.getElementById('hist-modal').classList.remove('show');}
+
+// ── toast ────────────────────────────────────────────────
+function showToast(msg){
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#238636;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,.4)';
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),3500);
+}
+
+// ── summary chips ────────────────────────────────────────
+function updateChips(data){
+  let total=0,ok=0,er=0,wa=0;
+  for(const{runs}of data) for(const r of runs){
+    total++;
+    const v=r.conclusion??r.status;
+    if(v==='success') ok++;
+    else if(['failure','timed_out','startup_failure'].includes(v)) er++;
+    else if(['in_progress','queued','waiting'].includes(r.status)) wa++;
+  }
+  document.getElementById('chips').innerHTML=
+    `<span class="chip">${data.length} repos · ${total} workflows</span>`+
+    (ok?`<span class="chip ok">✅ ${ok}</span>`:'')+
+    (er?`<span class="chip er">❌ ${er}</span>`:'')+
+    (wa?`<span class="chip wa">🔄 ${wa}</span>`:'');
+}
+
+// ── render ────────────────────────────────────────────────
+const EV_LABEL={push:'Push',pull_request:'Pull Request',workflow_dispatch:'Manual',schedule:'Scheduled',repository_dispatch:'Repository Dispatch'};
+
+function repoStats(runs){
+  const ok=runs.filter(r=>r.conclusion==='success').length;
+  const er=runs.filter(r=>['failure','timed_out','startup_failure'].includes(r.conclusion)).length;
+  const wa=runs.filter(r=>['in_progress','queued','waiting'].includes(r.status)).length;
+  return (ok?`<span class="rs-ok">✅ ${ok}</span>`:'')+
+    (er?`<span class="rs-er">❌ ${er}</span>`:'')+
+    (wa?`<span class="rs-wa">🔄 ${wa}</span>`:'')+
+    (!ok&&!er&&!wa?`<span class="rs-ne">—</span>`:'');
+}
+
+function renderRow(owner,repo,r){
+  const wfPath=r.path||`.github/workflows/${(r.name||'').toLowerCase().replace(/\s+/g,'-')}.yml`;
+  const nm=r.name.replace(/'/g,"\\'");
+  return `<tr>
+    <td class="wfn"><a href="${r.html_url}" target="_blank">${r.name}</a></td>
+    <td><span class="branch">${r.head_branch}</span></td>
+    <td>${actorCell(r)}</td>
+    <td>${stBadge(r)}</td>
+    <td class="dur">${duration(r)}</td>
+    <td class="rnum">#${r.run_number}</td>
+    <td style="display:flex;gap:5px;align-items:center">
+      <button class="ibtn" onclick="openHistory('${owner}','${repo}',${r.workflow_id},'${nm}')">📋 Historial</button>
+      <button class="tbtn" onclick="openDispatch('${owner}','${repo}',${r.workflow_id},'${nm}','${r.head_branch}','${wfPath}')">▶ Ejecutar</button>
+    </td>
+  </tr>`;
+}
+
+function render(data,filter){
+  const view=filterByContext(data);
+  updateChips(view);
+  const content=document.getElementById('content');
+  if(!view.length){content.innerHTML='<p style="color:var(--mu);padding:24px">Sin repos. Configurá en ⚙.</p>';return;}
+
+  const errors=view.filter(d=>d.error);
+  const errHtml=errors.map(({owner,repo,error})=>
+    `<div style="color:var(--er);font-size:12px;padding:8px 14px;border:1px solid rgba(248,81,73,.3);border-radius:6px;margin-bottom:8px">
+      ⚠ <strong>${owner}/${repo}</strong>: ${error}</div>`
+  ).join('');
+
+  const byEvent=new Map();
+  for(const {owner,repo,runs,error} of view){
+    if(error) continue;
+    for(const r of filterRuns(runs,filter)){
+      const ev=r.event||'unknown';
+      if(!byEvent.has(ev)) byEvent.set(ev,new Map());
+      const key=`${owner}/${repo}`;
+      if(!byEvent.get(ev).has(key)) byEvent.get(ev).set(key,{owner,repo,runs:[]});
+      byEvent.get(ev).get(key).runs.push(r);
+    }
+  }
+
+  if(!byEvent.size&&!errors.length){
+    content.innerHTML=errHtml+'<p style="color:var(--mu);padding:24px">Sin runs para este filtro.</p>';
+    return;
+  }
+
+  const evSections=[...byEvent.keys()].sort((a,b)=>{
+    return (EV_ORDER.indexOf(a)===-1?99:EV_ORDER.indexOf(a))-(EV_ORDER.indexOf(b)===-1?99:EV_ORDER.indexOf(b));
+  });
+
+  const sectionsHtml=evSections.map(ev=>{
+    const repoMap=byEvent.get(ev);
+    const allRuns=[...repoMap.values()].flatMap(r=>r.runs);
+    const stats=repoStats(allRuns);
+    const reposHtml=[...repoMap.values()].map(({owner,repo,runs})=>{
+      const sorted=[...runs].sort((a,b)=>a.name.localeCompare(b.name));
+      const rows=sorted.map(r=>renderRow(owner,repo,r)).join('');
+      const ghUrl=`https://github.com/${owner}/${repo}/actions`;
+      return `<div class="repo-sub">
+        <div class="repo-sub-header">
+          <a href="${ghUrl}" target="_blank" onclick="event.stopPropagation()">${owner}/<strong>${repo}</strong></a>
+          <span class="rstats">${repoStats(runs)}</span>
+        </div>
+        <table>
+          <thead><tr><th>Workflow</th><th>Branch</th><th>Actor</th><th>Estado</th><th>Duración</th><th>Run</th><th>Acciones</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    }).join('');
+    return `<details open>
+      <summary>
+        <span class="caret">▶</span>
+        <span class="ev-title">${evPill(ev)} ${EV_LABEL[ev]??ev}</span>
+        <span class="rstats">${stats}</span>
+      </summary>
+      ${reposHtml}
+    </details>`;
+  }).join('');
+
+  content.innerHTML=errHtml+sectionsHtml;
+}
+
+init();
+</script>
+</body>
+</html>
