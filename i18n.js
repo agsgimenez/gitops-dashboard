@@ -76,6 +76,8 @@ window.I18N = {
     settings_reset_confirm: '¿Borrar configuración?',
     settings_required: 'PAT y repos son requeridos',
 
+    env_title: 'Env Manager',
+    env_delete_confirm_p: '¿Eliminar <code>{key}</code> del environment <code>{env}</code>?',
     env_no_pat: '⚠ Sin PAT configurado. Abrí el GitOps Dashboard primero.',
     env_no_selection: 'Sin selección',
     env_loading_envs: '— Cargando... —',
@@ -200,6 +202,8 @@ window.I18N = {
     settings_reset_confirm: 'Delete configuration?',
     settings_required: 'PAT and repos are required',
 
+    env_title: 'Env Manager',
+    env_delete_confirm_p: 'Delete <code>{key}</code> from environment <code>{env}</code>?',
     env_no_pat: '⚠ No PAT configured. Open GitOps Dashboard first.',
     env_no_selection: 'No selection',
     env_loading_envs: '— Loading... —',
