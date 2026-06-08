@@ -84,6 +84,20 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .cli-box{background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:12px;font-family:monospace;font-size:11px;color:#adbac7;white-space:pre-wrap;word-break:break-all;max-height:320px;overflow-y:auto}
 .cli-comment{color:var(--ne)}
 
+/* ── scope sections ── */
+.scope-section{border-bottom:1px solid var(--bd)}
+.scope-section:last-child{border-bottom:none}
+.scope-header{padding:7px 12px;display:flex;align-items:center;gap:8px;background:var(--s2);border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.scope-label{font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.scope-label-org{background:rgba(210,153,34,.15);color:var(--wa);border:1px solid rgba(210,153,34,.3)}
+.scope-label-repo{background:rgba(63,185,80,.12);color:var(--ok);border:1px solid rgba(63,185,80,.25)}
+.scope-label-env{background:rgba(88,166,255,.12);color:var(--lk);border:1px solid rgba(88,166,255,.25)}
+.scope-ro{font-size:10px;color:var(--ne);margin-left:auto;white-space:nowrap}
+.scope-403-msg{font-size:11px;color:var(--er);margin-left:auto}
+.scope-empty{padding:10px 16px;font-size:12px;color:var(--ne)}
+.scope-active .scope-header{background:rgba(88,166,255,.04)}
+.tag-override{font-size:9px;padding:1px 5px;border-radius:8px;background:rgba(210,153,34,.15);color:var(--wa);border:1px solid rgba(210,153,34,.3);white-space:nowrap;cursor:default;flex-shrink:0}
+
 /* ── compare section ── */
 .compare-row{display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--bd);font-size:12px}
 .compare-row:last-child{border-bottom:none}
@@ -134,7 +148,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <div>
     <div class="panel" id="panel-vars">
       <div class="panel-head">
-        <h2 data-i18n="env_vars_title"></h2>
+        <h2 id="panel-vars-title" data-i18n="env_vars_title"></h2>
         <span class="badge badge-var" id="badge-count" style="display:none">0</span>
       </div>
       <div class="panel-body">
@@ -263,7 +277,8 @@ const LS_PAT = 'ci_pat', LS_REPOS = 'ci_repos';
 
 let currentRepo    = null;  // { owner, repo }
 let currentEnv     = null;  // 'Development' | 'Testing' | 'Production'
-let currentVars    = [];    // [{ name, value, type:'var'|'secret', updated_at }]
+let currentVars    = [];    // env-scoped only — used for compare + mutations
+let scopedVarsData = null;  // { org: {items}|{error}, repo: {items}, env: {items} }
 let editContext    = null;  // { name }
 let deleteContext  = null;  // { name, type }
 
@@ -412,98 +427,184 @@ async function ghDelete(path) {
 }
 
 // ── load vars + secrets ───────────────────────────────────
+async function fetchPaged(path, key) {
+  let all = [], page = 1;
+  while (true) {
+    const d = await ghGet(`${path}?per_page=100&page=${page}`);
+    all = all.concat(d[key] || []);
+    if ((d[key] || []).length < 100) break;
+    page++;
+  }
+  return all;
+}
+
 async function loadVars() {
   if (!currentRepo || !currentEnv) return;
   const { owner, repo } = currentRepo;
-  const envEncoded = encodeURIComponent(currentEnv);
+  const envEnc = encodeURIComponent(currentEnv);
+
   document.getElementById('vars-empty').textContent = t('loading');
   document.getElementById('vars-empty').style.display = 'block';
   document.getElementById('vars-table').style.display = 'none';
   document.getElementById('badge-count').style.display = 'none';
 
   try {
-    // Fetch variables and secrets in parallel
-    const [varsData, secretsData] = await Promise.all([
-      (async () => {
-        let all = [], page = 1;
-        while (true) {
-          const d = await ghGet(`/repos/${owner}/${repo}/environments/${envEncoded}/variables?per_page=100&page=${page}`);
-          all = all.concat(d.variables || []);
-          if ((d.variables || []).length < 100) break;
-          page++;
-        }
-        return all;
-      })(),
-      (async () => {
-        let all = [], page = 1;
-        while (true) {
-          const d = await ghGet(`/repos/${owner}/${repo}/environments/${envEncoded}/secrets?per_page=100&page=${page}`);
-          all = all.concat(d.secrets || []);
-          if ((d.secrets || []).length < 100) break;
-          page++;
-        }
-        return all;
-      })()
+    const [envVarsR, envSecsR, repoVarsR, repoSecsR, orgVarsR, orgSecsR] = await Promise.allSettled([
+      fetchPaged(`/repos/${owner}/${repo}/environments/${envEnc}/variables`, 'variables'),
+      fetchPaged(`/repos/${owner}/${repo}/environments/${envEnc}/secrets`, 'secrets'),
+      fetchPaged(`/repos/${owner}/${repo}/actions/variables`, 'variables'),
+      fetchPaged(`/repos/${owner}/${repo}/actions/secrets`, 'secrets'),
+      fetchPaged(`/orgs/${owner}/actions/variables`, 'variables'),
+      fetchPaged(`/orgs/${owner}/actions/secrets`, 'secrets'),
     ]);
 
+    const ok = r => r.status === 'fulfilled' ? r.value : [];
+    const orgFailed = orgVarsR.status === 'rejected';
+    const orgError  = orgFailed ? (orgVarsR.reason?.message || '403') : null;
+
     currentVars = [
-      ...varsData.map(v => ({ ...v, type: 'var' })),
-      ...secretsData.map(s => ({ name: s.name, value: null, type: 'secret', updated_at: s.updated_at }))
+      ...ok(envVarsR).map(v => ({ ...v, type: 'var',    scope: 'env' })),
+      ...ok(envSecsR).map(s => ({ name: s.name, value: null, type: 'secret', scope: 'env', updated_at: s.updated_at })),
     ];
-    renderVarsTable(currentVars);
+
+    scopedVarsData = {
+      org: orgFailed
+        ? { error: orgError }
+        : { items: [
+            ...ok(orgVarsR).map(v => ({ ...v, type: 'var',    scope: 'org' })),
+            ...ok(orgSecsR).map(s => ({ name: s.name, value: null, type: 'secret', scope: 'org', updated_at: s.updated_at })),
+          ]},
+      repo: { items: [
+        ...ok(repoVarsR).map(v => ({ ...v, type: 'var',    scope: 'repo' })),
+        ...ok(repoSecsR).map(s => ({ name: s.name, value: null, type: 'secret', scope: 'repo', updated_at: s.updated_at })),
+      ]},
+      env: { items: currentVars },
+    };
+
+    renderVarsTable(scopedVarsData);
   } catch(e) {
     document.getElementById('vars-empty').textContent = `Error: ${e.message}`;
     document.getElementById('vars-empty').style.display = 'block';
   }
 }
 
-function renderVarsTable(items) {
-  const empty = document.getElementById('vars-empty');
-  const table = document.getElementById('vars-table');
-  const badge = document.getElementById('badge-count');
+function renderVarsTable(scoped) {
+  const emptyEl = document.getElementById('vars-empty');
+  const tableEl = document.getElementById('vars-table');
+  const badge   = document.getElementById('badge-count');
+  const { owner, repo } = currentRepo;
 
-  if (!items.length) {
-    empty.textContent = t('env_no_vars');
-    empty.style.display = 'block';
-    table.style.display = 'none';
+  const envItems  = scoped.env.items;
+  const repoItems = scoped.repo.items;
+  const orgItems  = scoped.org.error ? [] : (scoped.org.items || []);
+  const total = envItems.length + repoItems.length + orgItems.length;
+
+  if (!total && !scoped.org.error) {
+    emptyEl.textContent = t('env_no_vars');
+    emptyEl.style.display = 'block';
+    tableEl.style.display = 'none';
     badge.style.display = 'none';
     return;
   }
+  emptyEl.style.display = 'none';
 
-  const varCount    = items.filter(i => i.type === 'var').length;
-  const secretCount = items.filter(i => i.type === 'secret').length;
-  badge.innerHTML = `<span class="badge badge-var">${varCount} var</span> <span class="badge badge-secret">${secretCount} secret</span>`;
+  // Key sets for override detection
+  const envKeys  = new Set(envItems.map(v => v.name));
+  const repoKeys = new Set(repoItems.map(v => v.name));
+  const orgKeys  = new Set(orgItems.map(v => v.name));
+
+  function scopeCountBadges(items) {
+    const vars = items.filter(i => i.type === 'var').length;
+    const secs = items.filter(i => i.type === 'secret').length;
+    const parts = [];
+    if (vars) parts.push(`<span class="badge badge-var">${vars} var</span>`);
+    if (secs) parts.push(`<span class="badge badge-secret">${secs} secret</span>`);
+    return parts.length ? `<span style="display:inline-flex;gap:4px">${parts.join('')}</span>` : '';
+  }
+
+  function scopeTable(items, scope, readonly) {
+    if (!items.length) return `<div class="scope-empty">${t('env_scope_empty')}</div>`;
+    const rows = [...items].sort((a, b) => a.name.localeCompare(b.name)).map(v => {
+      const isSecret = v.type === 'secret';
+      const typeBadge = isSecret
+        ? `<span class="badge badge-secret" style="font-size:9px">secret</span>`
+        : `<span class="badge badge-var" style="font-size:9px">var</span>`;
+      const valCell = isSecret
+        ? `<span class="val hidden">••••••</span>`
+        : `<span class="val">${esc(v.value)}</span>`;
+
+      let overrideTag = '';
+      if (scope === 'env') {
+        const lower = [repoKeys.has(v.name) && 'repo', orgKeys.has(v.name) && 'org'].filter(Boolean);
+        if (lower.length) overrideTag = `<span class="tag-override" title="${t('env_scope_overrides', {scopes: lower.join('+')})}">↑${lower.join('+')}</span>`;
+      } else if (scope === 'repo' && orgKeys.has(v.name)) {
+        overrideTag = `<span class="tag-override" title="${t('env_scope_overrides', {scopes: 'org'})}">↑org</span>`;
+      }
+
+      const editBtn = (!readonly && !isSecret)
+        ? `<button class="ia js-open-edit" data-name="${esc(v.name)}" data-value="${esc(v.value||'')}">Editar</button>`
+        : (!readonly && isSecret)
+          ? `<button class="ia js-prefill-secret" data-name="${esc(v.name)}">CLI</button>`
+          : '';
+      const delBtn = !readonly
+        ? `<button class="ia del js-open-delete" data-name="${esc(v.name)}" data-type="${v.type}">Eliminar</button>`
+        : '';
+
+      return `<tr>
+        <td style="display:flex;align-items:center;gap:6px">${typeBadge}${overrideTag}<span class="key">${esc(v.name)}</span></td>
+        <td>${valCell}</td>
+        <td style="white-space:nowrap;font-size:11px;color:var(--ne)">${relTime(v.updated_at)}</td>
+        <td class="row-actions">${editBtn}${delBtn}</td>
+      </tr>`;
+    }).join('');
+    return `<table>
+      <thead><tr><th>${t('env_th_name')}</th><th>${t('env_th_value')}</th><th>${t('env_th_updated')}</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+
+  const orgSection = scoped.org.error
+    ? `<div class="scope-section">
+        <div class="scope-header">
+          <span class="scope-label scope-label-org">${t('env_scope_org', {owner: esc(owner)})}</span>
+          <span class="scope-403-msg">${t('env_scope_403')}</span>
+        </div>
+      </div>`
+    : `<div class="scope-section">
+        <div class="scope-header">
+          <span class="scope-label scope-label-org">${t('env_scope_org', {owner: esc(owner)})}</span>
+          ${scopeCountBadges(orgItems)}
+          <span class="scope-ro">${t('env_scope_readonly')}</span>
+        </div>
+        <div>${scopeTable(orgItems, 'org', true)}</div>
+      </div>`;
+
+  const repoSection = `<div class="scope-section">
+      <div class="scope-header">
+        <span class="scope-label scope-label-repo">${t('env_scope_repo', {repo: esc(repo)})}</span>
+        ${scopeCountBadges(repoItems)}
+        <span class="scope-ro">${t('env_scope_readonly')}</span>
+      </div>
+      <div>${scopeTable(repoItems, 'repo', true)}</div>
+    </div>`;
+
+  const envSection = `<div class="scope-section scope-active">
+      <div class="scope-header">
+        <span class="scope-label scope-label-env">${t('env_scope_env_label', {env: esc(currentEnv)})}</span>
+        ${scopeCountBadges(envItems)}
+      </div>
+      <div>${scopeTable(envItems, 'env', false)}</div>
+    </div>`;
+
+  tableEl.innerHTML = orgSection + repoSection + envSection;
+  tableEl.style.display = 'block';
+
+  const allItems = [...orgItems, ...repoItems, ...envItems];
+  const varCount = allItems.filter(i => i.type === 'var').length;
+  const secCount = allItems.filter(i => i.type === 'secret').length;
+  badge.innerHTML = `<span class="badge badge-var">${varCount} var</span> <span class="badge badge-secret">${secCount} secret</span>`;
   badge.style.display = 'inline-flex';
   badge.style.gap = '4px';
-  empty.style.display = 'none';
-
-  const rows = [...items].sort((a,b) => a.name.localeCompare(b.name)).map(v => {
-    const isSecret = v.type === 'secret';
-    const typeBadge = isSecret
-      ? `<span class="badge badge-secret" style="font-size:9px">secret</span>`
-      : `<span class="badge badge-var"    style="font-size:9px">var</span>`;
-    const valCell = isSecret
-      ? `<span class="val hidden" title="Los secrets no se pueden leer via API">••••••</span>`
-      : `<span class="val">${esc(v.value)}</span>`;
-    const editBtn = isSecret
-      ? `<button class="ia js-prefill-secret" data-name="${esc(v.name)}" title="Genera el comando gh CLI">CLI</button>`
-      : `<button class="ia js-open-edit" data-name="${esc(v.name)}" data-value="${esc(v.value||'')}">Editar</button>`;
-    return `<tr>
-      <td style="display:flex;align-items:center;gap:6px">${typeBadge}<span class="key">${esc(v.name)}</span></td>
-      <td>${valCell}</td>
-      <td style="white-space:nowrap;font-size:11px;color:var(--ne)">${relTime(v.updated_at)}</td>
-      <td class="row-actions">
-        ${editBtn}
-        <button class="ia del js-open-delete" data-name="${esc(v.name)}" data-type="${v.type}">Eliminar</button>
-      </td>
-    </tr>`;
-  }).join('');
-
-  table.innerHTML = `<table>
-    <thead><tr><th>${t('env_th_name')}</th><th>${t('env_th_value')}</th><th>${t('env_th_updated')}</th><th></th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table>`;
-  table.style.display = 'block';
 }
 
 // ── add var ───────────────────────────────────────────────
