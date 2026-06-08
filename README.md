@@ -50,10 +50,11 @@ window.CI_CONFIG = {
 
 Go to [github.com/settings/tokens](https://github.com/settings/tokens) and create a token with:
 
-| Scope | Used for |
-|-------|----------|
-| `repo` | Read workflows, environments, variables and secrets |
-| `workflow` | Trigger `workflow_dispatch` |
+| Scope | Required | Used for |
+|-------|----------|----------|
+| `repo` | ✅ Yes | Read workflows, environments, repo-level and env-level variables/secrets |
+| `workflow` | ✅ Yes | Trigger `workflow_dispatch` |
+| `admin:org` (read) | ⚠ Optional | Show org-level variables and secrets in the Env Manager. Without it the org section displays a "no access" notice but the rest still works. |
 
 The token is entered once in the UI and stored in your browser's `localStorage`. It is never written to any file.
 
@@ -88,9 +89,12 @@ start "C:\path\to\gitops-dashboard\index.html"
 ### Environment Manager
 
 - Environments loaded dynamically from the GitHub API — no hardcoded list
-- Variables: visible values, editable directly in the UI
+- **Multi-scope view**: variables and secrets shown in three sections — org, repo, and environment — so you see the full effective config, not just one level
+- Override indicators (`↑org`, `↑repo`) flag keys that exist at a lower scope and are being overridden
+- Variables: visible values, editable directly in the UI (env-level only)
 - Secrets: names shown as `••••••`, CLI button generates the `gh secret set` command
 - Compare with `.env.example` to detect keys declared in the contract but missing in the environment
+- Org-level section requires `admin:org` PAT scope; shows a clear notice if absent
 
 ## Security
 
