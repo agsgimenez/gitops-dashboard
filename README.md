@@ -26,6 +26,8 @@ Built with plain HTML, CSS and JavaScript. Runs directly in the browser.
 | `dashboard.html?ctx=<org>` | CI dashboard filtered to selected context |
 | `prs.html?ctx=<org>` | PR Board — open PRs with live check runs |
 | `env-manager.html?ctx=<org>` | GitHub Environments variable and secret manager |
+| `release-status.html?ctx=<org>` | Branch diff + release workflow detection per repo |
+| `config-gaps.html?ctx=<org>` | Reference file vs GitHub Environment variable gap checker |
 
 ## Setup
 
@@ -96,6 +98,41 @@ start "C:\path\to\gitops-dashboard\index.html"
 - Compare with `.env.example` to detect keys declared in the contract but missing in the environment
 - Org-level section requires `admin:org` PAT scope; shows a clear notice if absent
 
+### Release Status
+
+- Per-repo comparison between two configurable branches (default `test → main`) using the GitHub compare API
+- Detects repos with pending commits that have no recent release workflow run
+- Workflow name matching by substring, supports multiple comma-separated patterns (e.g. `prepare release, publish releases`)
+- Status: ✅ Synchronized / ⚠️ Release prepared · pending merge / ⏳ In progress / 🔴 Pending release
+- Config: source branch, target branch, workflow name pattern, recency window in hours
+
+### Config Gaps
+
+- Select a repo, a reference file path, and optionally a GitHub Environment
+- Supported formats: `.env` (`KEY=value`), flat JSON (flattened to `Section__Key`), simple YAML
+- Compares declared keys against environment variable names — **values are never fetched or displayed**
+- Shows: ✓ present / ✗ missing / ∞ extra in environment
+- Preset buttons for `.env.example`, `appsettings.example.json`, `.env.template`
+
+## Docker
+
+Run the dashboard as a container — useful for LAN access without keeping a browser tab open as a server.
+
+```bash
+# Option A: pass config via environment variables
+GD_PAT=ghp_xxx GD_REPOS="my-org/repo-a,my-org/repo-b" docker compose up -d
+
+# Option B: mount your existing config.js (recommended — PAT never written to env)
+# Edit docker-compose.yml to uncomment the volumes section, then:
+docker compose up -d
+```
+
+Runs on port `8081` by default. Change the port mapping in `docker-compose.yml` if needed.
+
+Health check available at `http://localhost:8081/healthz`.
+
+> **Note:** If using `GD_PAT`, the token is written to `config.js` on the container's filesystem. Only use this behind a firewall or on localhost.
+
 ## Security
 
 GitOps Dashboard has no backend. All GitHub API requests run directly from your browser using the PAT you provide.
@@ -122,16 +159,22 @@ Files in `envs/` are gitignored.
 
 ```text
 gitops-dashboard/
-├── index.html            # Home: PAT setup + workspace switcher
-├── dashboard.html        # CI dashboard (?ctx=<org>)
-├── prs.html              # PR board (?ctx=<org>)
-├── env-manager.html      # Environment manager (?ctx=<org>)
-├── config.example.js     # Config template
-├── config.js             # Your config (gitignored)
+├── index.html              # Home: PAT setup + workspace switcher
+├── dashboard.html          # CI dashboard (?ctx=<org>)
+├── prs.html                # PR board (?ctx=<org>)
+├── env-manager.html        # Environment manager (?ctx=<org>)
+├── release-status.html     # Branch diff + release workflow status (?ctx=<org>)
+├── config-gaps.html        # Reference file vs GitHub Environment gap checker (?ctx=<org>)
+├── config.example.js       # Config template
+├── config.js               # Your config (gitignored)
+├── Dockerfile              # nginx:alpine image
+├── docker-compose.yml      # Compose with port 8081 and volume/env config
+├── docker-entrypoint.sh    # Generates config.js from GD_PAT / GD_REPOS at start
+├── nginx.conf              # Static file server config
 ├── scripts/
-│   └── sync-env.sh       # Bulk upload vars/secrets via gh CLI
-├── envs/                 # Local .env files (gitignored)
-├── docs/                 # Public landing page (GitHub Pages)
+│   └── sync-env.sh         # Bulk upload vars/secrets via gh CLI
+├── envs/                   # Local .env files (gitignored)
+├── docs/                   # Public landing page (GitHub Pages)
 ├── LICENSE
 └── README.md
 ```

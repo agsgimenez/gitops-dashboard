@@ -38,15 +38,21 @@ Examples: `feature/env-comparison`, `fix/workflow-dispatch-modal`, `docs/screens
 
 ```text
 gitops-dashboard/
-├── index.html          # Home: Workspace switcher + PAT setup
-├── dashboard.html      # CI workflow monitor (reads ?ctx= from URL)
-├── prs.html            # PR Board with live check runs
-├── env-manager.html    # GitHub Environment variable/secret manager
-├── config.example.js   # Config template (copy to config.js to use)
+├── index.html              # Home: Workspace switcher + PAT setup
+├── dashboard.html          # CI workflow monitor (reads ?ctx= from URL)
+├── prs.html                # PR Board with live check runs
+├── env-manager.html        # GitHub Environment variable/secret manager
+├── release-status.html     # Branch diff + release workflow detection
+├── config-gaps.html        # Reference file vs GitHub Environment gap checker
+├── config.example.js       # Config template (copy to config.js to use)
+├── Dockerfile              # nginx:alpine container image
+├── docker-compose.yml      # Compose setup (port 8081)
+├── docker-entrypoint.sh    # Generates config.js from env vars at start
+├── nginx.conf              # nginx static file server config
 ├── scripts/
-│   └── sync-env.sh     # Bulk-upload env vars via gh CLI
+│   └── sync-env.sh         # Bulk-upload env vars via gh CLI
 └── docs/
-    └── index.html      # Public landing page
+    └── index.html          # Public landing page
 ```
 
 ## Style guide
