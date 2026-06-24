@@ -1,0 +1,6 @@
+config.js
+node_modules
+.git
+*.md
+docs/
+package-lock.json

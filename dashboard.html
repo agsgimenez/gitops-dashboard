@@ -146,6 +146,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <button class="hbtn" id="rbtn" onclick="loadAll()" data-i18n="refresh"></button>
   <a class="hbtn" id="pr-link" href="prs.html" style="text-decoration:none">🔀 PRs</a>
   <a class="hbtn" id="env-link" href="env-manager.html" style="text-decoration:none">🔑 Env Manager</a>
+  <a class="hbtn" id="release-link" href="release-status.html" style="text-decoration:none">🚀 Releases</a>
+  <a class="hbtn" id="gaps-link" href="config-gaps.html" style="text-decoration:none">🔍 Config Gaps</a>
   <button class="hbtn" id="notif-btn" onclick="toggleNotifications()" title="Notificaciones">🔔</button>
   <button class="hbtn" id="lang-btn" onclick="toggleLang()"></button>
   <button class="hbtn" onclick="openSettings()">⚙</button>
@@ -227,6 +229,8 @@ function init() {
   updateOrgIndicator(ctx);
   document.getElementById('env-link').href=`env-manager.html?ctx=${encodeURIComponent(ctx)}`;
   document.getElementById('pr-link').href=`prs.html?ctx=${encodeURIComponent(ctx)}`;
+  document.getElementById('release-link').href=`release-status.html?ctx=${encodeURIComponent(ctx)}`;
+  document.getElementById('gaps-link').href=`config-gaps.html?ctx=${encodeURIComponent(ctx)}`;
   initNotifications();
   // Delegated listener for history/dispatch buttons (avoids onclick string injection)
   document.getElementById('content').addEventListener('click',e=>{

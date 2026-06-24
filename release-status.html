@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Release Status — GitOps Dashboard</title>
+<style>
+:root{
+  --bg:#0d1117;--s1:#161b22;--s2:#1c2128;--bd:#30363d;
+  --tx:#e6edf3;--mu:#8b949e;--lk:#58a6ff;
+  --ok:#3fb950;--er:#f85149;--wa:#d29922;--ne:#6e7681;
+  --btn:#21262d;--bth:#30363d;--gr:#238636;--grh:#2ea043;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;min-height:100vh}
+
+/* header */
+header{padding:11px 24px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px;position:sticky;top:0;background:var(--bg);z-index:20}
+header h1{font-size:14px;font-weight:700;flex:0 0 auto}
+#chips{display:flex;gap:6px;flex:1;padding:0 10px;flex-wrap:wrap}
+.chip{font-size:11px;padding:3px 9px;border-radius:20px;border:1px solid var(--bd);color:var(--mu);background:var(--btn);font-weight:500}
+.chip.ok{color:var(--ok);border-color:rgba(63,185,80,.3);background:rgba(63,185,80,.08)}
+.chip.er{color:var(--er);border-color:rgba(248,81,73,.3);background:rgba(248,81,73,.08)}
+.chip.wa{color:var(--wa);border-color:rgba(210,153,34,.3);background:rgba(210,153,34,.08)}
+.hbtn{background:var(--btn);border:1px solid var(--bd);color:var(--tx);padding:4px 11px;border-radius:6px;cursor:pointer;font-size:12px;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.hbtn:hover{background:var(--bth)}.hbtn:disabled{opacity:.5;cursor:default}
+#org-indicator{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--tx);padding:3px 10px;border:1px solid var(--bd);border-radius:20px;background:var(--s2);white-space:nowrap}
+#org-indicator img{border-radius:3px}
+
+/* config bar */
+#cfg-bar{padding:10px 24px;border-bottom:1px solid var(--bd);display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:var(--s2)}
+.cfg-label{font-size:11px;color:var(--mu);font-weight:600;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+.cfg-inp{background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:4px 9px;border-radius:6px;font-size:12px;font-family:monospace}
+.cfg-inp.w80{width:80px}
+.cfg-inp.w200{width:200px}
+.cfg-inp.w60{width:60px}
+.cfg-group{display:flex;align-items:center;gap:6px}
+.cfg-arrow{color:var(--mu);font-size:14px}
+
+/* main */
+main{padding:20px 24px;max-width:1100px}
+#loading{text-align:center;padding:60px;color:var(--mu)}
+
+/* table */
+table{width:100%;border-collapse:collapse;background:var(--s1);border:1px solid var(--bd);border-radius:8px;overflow:hidden}
+th{text-align:left;padding:6px 11px;font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd);background:var(--s2);white-space:nowrap}
+td{padding:9px 11px;border-bottom:1px solid var(--bd);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+
+.repo-link{color:var(--lk);text-decoration:none;font-family:monospace;font-size:13px;font-weight:500}
+.repo-link:hover{text-decoration:underline}
+.branch-pill{background:var(--btn);border:1px solid var(--bd);border-radius:12px;padding:2px 8px;font-size:11px;color:var(--mu);font-family:monospace;white-space:nowrap}
+.diff-ahead{color:var(--wa);font-family:monospace;font-size:12px}
+.diff-sync{color:var(--ok);font-size:12px}
+.diff-ne{color:var(--ne);font-size:12px;font-style:italic}
+.run-info{display:flex;flex-direction:column;gap:2px}
+.run-info a{color:var(--lk);text-decoration:none;font-size:12px}.run-info a:hover{text-decoration:underline}
+.run-ago{font-size:11px;color:var(--ne)}
+.run-stale{font-size:10px;color:var(--er)}
+.st-ok{color:var(--ok);font-weight:500;font-size:13px}
+.st-warn{color:var(--wa);font-weight:500;font-size:13px}
+.st-er{color:var(--er);font-weight:500;font-size:13px}
+.st-ne{color:var(--ne);font-size:12px}
+.cell-loading{color:var(--ne);font-size:12px;font-style:italic}
+</style>
+</head>
+<body>
+
+<header>
+  <a class="hbtn" id="back-link" href="dashboard.html">← Dashboard</a>
+  <h1>Release Status</h1>
+  <span id="org-indicator" style="display:none"></span>
+  <div id="chips"></div>
+  <button class="hbtn" id="rbtn" onclick="loadAll()">↻ Refresh</button>
+  <button class="hbtn" id="lang-btn" onclick="toggleLang()"></button>
+</header>
+
+<div id="cfg-bar">
+  <div class="cfg-group">
+    <span class="cfg-label">De</span>
+    <input id="cfg-from" class="cfg-inp w80" value="test" placeholder="test"/>
+    <span class="cfg-arrow">→</span>
+    <span class="cfg-label">A</span>
+    <input id="cfg-to" class="cfg-inp w80" value="main" placeholder="main"/>
+  </div>
+  <div class="cfg-group">
+    <span class="cfg-label">Workflow release (contiene)</span>
+    <input id="cfg-pattern" class="cfg-inp w200" value="prepare release" placeholder="prepare release · dejar vacío para omitir"/>
+  </div>
+  <div class="cfg-group">
+    <span class="cfg-label">Ventana (hs)</span>
+    <input id="cfg-hours" class="cfg-inp w60" type="number" value="72" min="1" max="9999"/>
+  </div>
+  <button class="hbtn" onclick="loadAll()">Aplicar</button>
+</div>
+
+<main id="main">
+  <div id="loading">Cargando…</div>
+</main>
+
+<script src="i18n.js"></script>
+<script src="config.js" onerror="void 0"></script>
+<script>
+const LS_PAT='ci_pat', LS_REPOS='ci_repos', GH='https://api.github.com';
+let currentContext='all';
+let summary={ok:0,warn:0,er:0,ne:0,total:0};
+
+function getPat()   { return window.CI_CONFIG?.pat   || localStorage.getItem(LS_PAT); }
+function getRepos() { return window.CI_CONFIG?.repos?.join('\n') || localStorage.getItem(LS_REPOS) || ''; }
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function parseRepos(){
+  return getRepos().split('\n').map(s=>s.trim())
+    .filter(s=>s.includes('/')&&!s.startsWith('//')&&!s.startsWith('#'))
+    .map(s=>{const[o,r]=s.split('/');return{owner:o,repo:r};});
+}
+
+function ghH(){ return{Authorization:`Bearer ${getPat()}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}; }
+
+async function ghGet(path){
+  const r=await fetch(`${GH}${path}`,{headers:ghH()});
+  if(r.status===401){localStorage.removeItem(LS_PAT);location.replace('index.html');}
+  if(r.status===404){ const e=new Error('not_found'); e.status=404; throw e; }
+  if(r.status===429||(r.status===403&&r.headers.get('X-RateLimit-Remaining')==='0')){
+    throw new Error('rate_limited');
+  }
+  if(!r.ok) throw new Error(`GitHub ${r.status}`);
+  return r.json();
+}
+
+async function fetchCompare(owner,repo,base,head){
+  return ghGet(`/repos/${owner}/${repo}/compare/${encodeURIComponent(base)}...${encodeURIComponent(head)}`);
+}
+
+async function fetchRecentRelease(owner,repo,pattern,hours){
+  const cutoff=new Date(Date.now()-hours*3600*1000);
+  const d=await ghGet(`/repos/${owner}/${repo}/actions/runs?per_page=100`);
+  const lc=pattern.toLowerCase();
+  const runs=(d.workflow_runs||[])
+    .filter(r=>r.name.toLowerCase().includes(lc))
+    .sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  if(!runs.length) return null;
+  const latest=runs[0];
+  return{run:latest,recent:new Date(latest.created_at)>=cutoff};
+}
+
+function relTime(iso){
+  if(!iso) return '—';
+  const s=Math.floor((Date.now()-new Date(iso))/1000);
+  if(s<60) return `${s}s`;
+  if(s<3600) return `${Math.floor(s/60)}min`;
+  if(s<86400) return `${Math.floor(s/3600)}h`;
+  return `${Math.floor(s/86400)}d`;
+}
+
+function runIcon(run){
+  const v=run?.conclusion??run?.status;
+  return{success:'✅',failure:'❌',timed_out:'❌',cancelled:'⊘',in_progress:'🔄',queued:'⏳',skipped:'⊘'}[v]??'○';
+}
+
+function updateChips(){
+  const{ok,warn,er,ne,total}=summary;
+  document.getElementById('chips').innerHTML=
+    `<span class="chip">${total} repos</span>`+
+    (ok?`<span class="chip ok">✅ ${ok} sync</span>`:'')+
+    (warn?`<span class="chip wa">⚠️ ${warn} pendiente merge</span>`:'')+
+    (er?`<span class="chip er">🔴 ${er} sin release</span>`:'')+
+    (ne?`<span class="chip">${ne} sin rama</span>`:'');
+}
+
+async function processRepo(owner,repo,from,to,pattern,hours){
+  const rowEl=document.getElementById(`row-${owner}-${repo}`);
+  const cells=rowEl?.querySelectorAll('td');
+  if(!cells) return;
+
+  try{
+    const [cmpResult,releaseResult]=await Promise.allSettled([
+      fetchCompare(owner,repo,to,from),
+      pattern ? fetchRecentRelease(owner,repo,pattern,hours) : Promise.resolve(null)
+    ]);
+
+    const cmp=cmpResult.status==='fulfilled'?cmpResult.value:null;
+    const cmpErr=cmpResult.status==='rejected'?cmpResult.reason:null;
+    const release=releaseResult.status==='fulfilled'?releaseResult.value:null;
+
+    if(cmpErr){
+      if(cmpErr.status===404){
+        cells[2].innerHTML=`<span class="diff-ne">—</span>`;
+        cells[3].innerHTML=`<span class="diff-ne">—</span>`;
+        cells[4].innerHTML=`<span class="st-ne">Sin rama configurada</span>`;
+        summary.ne++;
+      } else {
+        cells[2].innerHTML=`<span class="st-er">Error</span>`;
+        cells[3].innerHTML='—';
+        cells[4].innerHTML=`<span class="st-er">${esc(cmpErr.message)}</span>`;
+      }
+      summary.total++;
+      updateChips();
+      return;
+    }
+
+    const ahead=cmp.ahead_by||0;
+
+    // Diff cell
+    if(ahead===0){
+      cells[2].innerHTML=`<span class="diff-sync">✅ 0 commits</span>`;
+    } else {
+      cells[2].innerHTML=`<span class="diff-ahead">+${ahead} commit${ahead!==1?'s':''}</span>`;
+    }
+
+    // Release run cell
+    if(release){
+      const r=release.run;
+      cells[3].innerHTML=`<div class="run-info">
+        <a href="${r.html_url}" target="_blank">${runIcon(r)} ${esc(r.name)}</a>
+        <span class="run-ago">${relTime(r.created_at)}</span>
+        ${!release.recent?`<span class="run-stale">fuera de ventana (${document.getElementById('cfg-hours').value}h)</span>`:''}
+      </div>`;
+    } else {
+      cells[3].innerHTML=pattern
+        ? `<span class="st-ne">Sin runs encontrados</span>`
+        : `<span class="st-ne">—</span>`;
+    }
+
+    // Status cell
+    if(ahead===0){
+      cells[4].innerHTML=`<span class="st-ok">✅ Sincronizado</span>`;
+      summary.ok++;
+    } else if(pattern && release?.recent && release.run.conclusion==='success'){
+      cells[4].innerHTML=`<span class="st-warn">⚠️ Release preparado · pendiente merge</span>`;
+      summary.warn++;
+    } else if(pattern && release?.recent){
+      cells[4].innerHTML=`<span class="st-warn">⏳ Release en proceso</span>`;
+      summary.warn++;
+    } else {
+      cells[4].innerHTML=`<span class="st-er">🔴 Pendiente release</span>`;
+      summary.er++;
+    }
+
+    summary.total++;
+    updateChips();
+
+  } catch(e){
+    const cells=document.getElementById(`row-${owner}-${repo}`)?.querySelectorAll('td');
+    if(cells){
+      cells[2].innerHTML=`<span class="st-er">Error</span>`;
+      cells[3].innerHTML='—';
+      cells[4].innerHTML=`<span class="st-er">${esc(e.message)}</span>`;
+    }
+    summary.total++;
+    updateChips();
+  }
+}
+
+async function loadAll(){
+  const btn=document.getElementById('rbtn');
+  btn.disabled=true; btn.textContent='↻ …';
+
+  const from=document.getElementById('cfg-from').value.trim()||'test';
+  const to=document.getElementById('cfg-to').value.trim()||'main';
+  const pattern=document.getElementById('cfg-pattern').value.trim();
+  const hours=parseInt(document.getElementById('cfg-hours').value)||72;
+
+  const repos=parseRepos().filter(r=>currentContext==='all'||r.owner===currentContext);
+  summary={ok:0,warn:0,er:0,ne:0,total:0};
+
+  if(!repos.length){
+    document.getElementById('main').innerHTML=`<p style="color:var(--mu);padding:24px">Sin repos. Configurá en ⚙ del dashboard.</p>`;
+    btn.disabled=false; btn.textContent='↻ Refresh';
+    return;
+  }
+
+  const skeletonRows=repos.map(({owner,repo})=>`
+    <tr id="row-${esc(owner)}-${esc(repo)}">
+      <td><a class="repo-link" href="https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}" target="_blank">${esc(owner)}/<strong>${esc(repo)}</strong></a></td>
+      <td><span class="branch-pill">${esc(from)}</span> <span style="color:var(--ne)">→</span> <span class="branch-pill">${esc(to)}</span></td>
+      <td class="cell-loading">…</td>
+      <td class="cell-loading">…</td>
+      <td class="cell-loading">…</td>
+    </tr>`).join('');
+
+  document.getElementById('main').innerHTML=`
+    <table>
+      <thead><tr>
+        <th>Repo</th>
+        <th>Comparación</th>
+        <th>Diff (${esc(from)} → ${esc(to)})</th>
+        <th>Último release run</th>
+        <th>Estado</th>
+      </tr></thead>
+      <tbody>${skeletonRows}</tbody>
+    </table>`;
+
+  updateChips();
+
+  await Promise.allSettled(repos.map(({owner,repo})=>processRepo(owner,repo,from,to,pattern,hours)));
+
+  btn.disabled=false; btn.textContent='↻ Refresh';
+}
+
+function init(){
+  if(!getPat()||!getRepos()){ location.replace('index.html'); return; }
+  const ctx=new URLSearchParams(location.search).get('ctx');
+  if(!ctx){ location.replace('index.html'); return; }
+  currentContext=ctx;
+  applyI18n();
+
+  document.getElementById('back-link').href=`dashboard.html?ctx=${encodeURIComponent(ctx)}`;
+
+  const ind=document.getElementById('org-indicator');
+  ind.style.display='flex';
+  if(ctx==='all') ind.textContent='Todos';
+  else ind.innerHTML=`<img src="https://github.com/${encodeURIComponent(ctx)}.png?size=20" width="18" height="18"> ${esc(ctx)}`;
+
+  loadAll();
+}
+
+init();
+</script>
+</body>
+</html>

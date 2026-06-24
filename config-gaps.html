@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Config Gaps — GitOps Dashboard</title>
+<style>
+:root{
+  --bg:#0d1117;--s1:#161b22;--s2:#1c2128;--bd:#30363d;
+  --tx:#e6edf3;--mu:#8b949e;--lk:#58a6ff;
+  --ok:#3fb950;--er:#f85149;--wa:#d29922;--ne:#6e7681;
+  --btn:#21262d;--bth:#30363d;--gr:#238636;--grh:#2ea043;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;min-height:100vh}
+
+/* header */
+header{padding:11px 24px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px;position:sticky;top:0;background:var(--bg);z-index:20}
+header h1{font-size:14px;font-weight:700;flex:0 0 auto}
+.hbtn{background:var(--btn);border:1px solid var(--bd);color:var(--tx);padding:4px 11px;border-radius:6px;cursor:pointer;font-size:12px;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.hbtn:hover{background:var(--bth)}.hbtn:disabled{opacity:.5;cursor:default}
+
+/* panel toolbar */
+#toolbar{padding:14px 24px;border-bottom:1px solid var(--bd);display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;background:var(--s2)}
+.tf{display:flex;flex-direction:column;gap:5px}
+.tf label{font-size:11px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.4px}
+.tf select,.tf input{background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:5px 9px;border-radius:6px;font-size:13px}
+.tf select{min-width:200px}
+.tf input{min-width:220px;font-family:monospace}
+.tf .hint{font-size:10px;color:var(--ne)}
+.presets{display:flex;gap:5px;margin-top:4px}
+.preset-btn{background:var(--s2);border:1px solid var(--bd);color:var(--mu);padding:2px 7px;border-radius:4px;cursor:pointer;font-size:10px;font-family:monospace}
+.preset-btn:hover{color:var(--tx);border-color:var(--lk)}
+
+/* summary bar */
+#summary-bar{padding:8px 24px;border-bottom:1px solid var(--bd);display:none;gap:14px;align-items:center;flex-wrap:wrap}
+.sb-chip{font-size:12px;padding:3px 10px;border-radius:12px;font-weight:500}
+.sb-ok{color:var(--ok);background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.25)}
+.sb-miss{color:var(--er);background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.25)}
+.sb-extra{color:var(--wa);background:rgba(210,153,34,.08);border:1px solid rgba(210,153,34,.25)}
+.sb-info{color:var(--mu);font-size:11px}
+
+/* main */
+main{padding:20px 24px;max-width:900px}
+#content-area p.hint{color:var(--mu);font-size:12px;margin-bottom:14px}
+
+/* table */
+table{width:100%;border-collapse:collapse;background:var(--s1);border:1px solid var(--bd);border-radius:8px;overflow:hidden}
+th{text-align:left;padding:6px 11px;font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd);background:var(--s2);white-space:nowrap}
+td{padding:8px 11px;border-bottom:1px solid var(--bd);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr.row-miss td{background:rgba(248,81,73,.03)}
+tr:hover td{background:rgba(255,255,255,.02)}
+.key-name{font-family:monospace;font-size:12px;color:var(--tx)}
+.key-name.extra{color:var(--ne)}
+.gap-ok{color:var(--ok);font-size:12px}
+.gap-miss{color:var(--er);font-size:12px;font-weight:600}
+.gap-extra{color:var(--wa);font-size:12px}
+.gap-ne{color:var(--ne);font-size:12px}
+
+.notice{padding:16px 20px;border-radius:8px;font-size:13px;margin-bottom:16px;border:1px solid}
+.notice.warn{color:var(--wa);border-color:rgba(210,153,34,.3);background:rgba(210,153,34,.06)}
+.notice.err{color:var(--er);border-color:rgba(248,81,73,.3);background:rgba(248,81,73,.06)}
+.notice.info{color:var(--mu);border-color:var(--bd);background:var(--s2)}
+
+#initial-hint{padding:40px 24px;text-align:center;color:var(--mu);font-size:13px;line-height:1.8}
+#initial-hint code{background:var(--s2);padding:1px 6px;border-radius:4px;font-size:12px}
+</style>
+</head>
+<body>
+
+<header>
+  <a class="hbtn" id="back-link" href="dashboard.html">← Dashboard</a>
+  <h1>Config Gaps</h1>
+  <span style="flex:1"></span>
+  <button class="hbtn" id="lang-btn" onclick="toggleLang()"></button>
+</header>
+
+<div id="toolbar">
+  <div class="tf">
+    <label>Repo</label>
+    <select id="repo-sel"><option value="">— Repo —</option></select>
+  </div>
+  <div class="tf">
+    <label>Archivo de referencia</label>
+    <input id="ref-path" value=".env.example" placeholder=".env.example"/>
+    <div class="presets">
+      <button class="preset-btn" onclick="setPath('.env.example')">.env.example</button>
+      <button class="preset-btn" onclick="setPath('appsettings.example.json')">appsettings.example.json</button>
+      <button class="preset-btn" onclick="setPath('.env.template')">.env.template</button>
+    </div>
+    <span class="hint">Formatos soportados: .env / JSON plano / YAML (KEY: value)</span>
+  </div>
+  <div class="tf">
+    <label>GitHub Environment (opcional)</label>
+    <select id="env-sel" disabled><option value="">— Sin environment —</option></select>
+    <span class="hint">Compara las keys contra las variables del environment</span>
+  </div>
+  <button class="hbtn" onclick="loadGaps()" id="load-btn" style="align-self:flex-end;padding:6px 16px">Cargar</button>
+</div>
+
+<div id="summary-bar"></div>
+
+<main>
+  <div id="content-area">
+    <div id="initial-hint">
+      Seleccioná un repo y un archivo de referencia para ver qué variables están configuradas.<br>
+      <br>
+      El archivo se lee desde el repo via GitHub API.<br>
+      Ningún <strong>valor</strong> es expuesto — solo los <strong>nombres</strong> de las keys.
+    </div>
+  </div>
+</main>
+
+<script src="i18n.js"></script>
+<script src="config.js" onerror="void 0"></script>
+<script>
+const LS_PAT='ci_pat', LS_REPOS='ci_repos', GH='https://api.github.com';
+let currentContext='all';
+
+function getPat()   { return window.CI_CONFIG?.pat   || localStorage.getItem(LS_PAT); }
+function getRepos() { return window.CI_CONFIG?.repos?.join('\n') || localStorage.getItem(LS_REPOS) || ''; }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function parseRepos(){
+  return getRepos().split('\n').map(s=>s.trim())
+    .filter(s=>s.includes('/')&&!s.startsWith('//')&&!s.startsWith('#'))
+    .map(s=>{const[o,r]=s.split('/');return{owner:o,repo:r};});
+}
+
+function ghH(){ return{Authorization:`Bearer ${getPat()}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}; }
+
+async function ghGet(path){
+  const r=await fetch(`${GH}${path}`,{headers:ghH()});
+  if(r.status===401){localStorage.removeItem(LS_PAT);location.replace('index.html');}
+  if(r.status===404){ const e=new Error('not_found'); e.status=404; throw e; }
+  if(r.status===429||(r.status===403&&r.headers.get('X-RateLimit-Remaining')==='0')){
+    throw new Error('rate_limited');
+  }
+  if(!r.ok) throw new Error(`GitHub ${r.status}`);
+  return r.json();
+}
+
+function setPath(p){ document.getElementById('ref-path').value=p; }
+
+// ── parsers ───────────────────────────────────────────────
+
+function parseEnvFile(content){
+  const keys=[];
+  for(const raw of content.split('\n')){
+    const line=raw.trim();
+    if(!line||line.startsWith('#')) continue;
+    const m=line.match(/^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*(?:=|:)/);
+    if(m&&!keys.includes(m[1])) keys.push(m[1]);
+  }
+  return keys.sort();
+}
+
+function parseJsonFlat(content){
+  try {
+    const obj=JSON.parse(content);
+    const keys=[];
+    function walk(o,prefix){
+      if(typeof o!=='object'||o===null||Array.isArray(o)){
+        if(prefix) keys.push(prefix);
+        return;
+      }
+      for(const[k,v]of Object.entries(o)){
+        walk(v,prefix?`${prefix}__${k}`:k);
+      }
+    }
+    walk(obj,'');
+    return keys.sort();
+  } catch(e){ return null; }
+}
+
+function parseYamlFlat(content){
+  // Handles simple key: value YAML (not nested). Enough for common config templates.
+  const keys=[];
+  for(const raw of content.split('\n')){
+    const line=raw.trim();
+    if(!line||line.startsWith('#')) continue;
+    const m=line.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*:/);
+    if(m&&!keys.includes(m[1])) keys.push(m[1]);
+  }
+  return keys.sort();
+}
+
+function detectAndParse(content,path){
+  if(path.endsWith('.json')){
+    const result=parseJsonFlat(content);
+    if(result!==null) return{keys:result,format:'JSON'};
+    return{keys:[],format:'JSON',error:'JSON inválido'};
+  }
+  if(path.endsWith('.yml')||path.endsWith('.yaml')){
+    return{keys:parseYamlFlat(content),format:'YAML'};
+  }
+  return{keys:parseEnvFile(content),format:'.env'};
+}
+
+// ── github ────────────────────────────────────────────────
+
+async function fetchFileContent(owner,repo,path){
+  const d=await ghGet(`/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`);
+  return atob(d.content.replace(/\n/g,''));
+}
+
+async function fetchEnvironments(owner,repo){
+  try {
+    const d=await ghGet(`/repos/${owner}/${repo}/environments`);
+    return(d.environments||[]).map(e=>e.name);
+  } catch(e){ return []; }
+}
+
+async function fetchEnvVarNames(owner,repo,envName){
+  try {
+    let all=[],page=1;
+    while(true){
+      const d=await ghGet(`/repos/${owner}/${repo}/environments/${encodeURIComponent(envName)}/variables?per_page=100&page=${page}`);
+      all=all.concat((d.variables||[]).map(v=>v.name));
+      if((d.variables||[]).length<100) break;
+      page++;
+    }
+    return all;
+  } catch(e){ return []; }
+}
+
+// ── repo selector ─────────────────────────────────────────
+
+function initRepoSelector(){
+  const sel=document.getElementById('repo-sel');
+  const repos=parseRepos().filter(r=>currentContext==='all'||r.owner===currentContext);
+  sel.innerHTML=`<option value="">— Repo —</option>`+
+    repos.map(({owner,repo})=>`<option value="${owner}/${repo}">${esc(owner)}/${esc(repo)}</option>`).join('');
+
+  sel.addEventListener('change',async()=>{
+    const val=sel.value;
+    const envSel=document.getElementById('env-sel');
+    envSel.innerHTML=`<option value="">— Sin environment —</option>`;
+    envSel.disabled=true;
+    document.getElementById('content-area').innerHTML=`<div id="initial-hint" style="padding:40px 24px;text-align:center;color:var(--mu);font-size:13px">Seleccioná el archivo de referencia y hacé click en Cargar.</div>`;
+    document.getElementById('summary-bar').style.display='none';
+    if(!val) return;
+    const[owner,repo]=val.split('/');
+    const envs=await fetchEnvironments(owner,repo);
+    if(envs.length){
+      envSel.innerHTML=`<option value="">— Sin environment —</option>`+
+        envs.map(e=>`<option value="${esc(e)}">${esc(e)}</option>`).join('');
+      envSel.disabled=false;
+    }
+  });
+}
+
+// ── main load ─────────────────────────────────────────────
+
+async function loadGaps(){
+  const repoVal=document.getElementById('repo-sel').value;
+  if(!repoVal) return alert('Seleccioná un repo');
+  const[owner,repo]=repoVal.split('/');
+  const refPath=document.getElementById('ref-path').value.trim();
+  if(!refPath) return alert('Ingresá el path del archivo de referencia');
+  const envName=document.getElementById('env-sel').value;
+
+  const btn=document.getElementById('load-btn');
+  btn.disabled=true; btn.textContent='Cargando…';
+  document.getElementById('content-area').innerHTML=`<div style="padding:40px;text-align:center;color:var(--mu)">Cargando…</div>`;
+  document.getElementById('summary-bar').style.display='none';
+
+  try{
+    // Fetch reference file
+    let refContent;
+    try{
+      refContent=await fetchFileContent(owner,repo,refPath);
+    } catch(e){
+      if(e.status===404){
+        document.getElementById('content-area').innerHTML=`<div class="notice err">⚠ Archivo <code>${esc(refPath)}</code> no encontrado en <strong>${esc(owner)}/${esc(repo)}</strong>.<br><br>Verificá el path o intentá con otro archivo de referencia.</div>`;
+        btn.disabled=false; btn.textContent='Cargar';
+        return;
+      }
+      throw e;
+    }
+
+    const{keys:refKeys,format,error:parseError}=detectAndParse(refContent,refPath);
+
+    if(parseError){
+      document.getElementById('content-area').innerHTML=`<div class="notice err">⚠ Error al parsear: ${esc(parseError)}</div>`;
+      btn.disabled=false; btn.textContent='Cargar';
+      return;
+    }
+
+    if(!refKeys.length){
+      document.getElementById('content-area').innerHTML=`<div class="notice warn">⚠ No se encontraron keys en <code>${esc(refPath)}</code>.<br>Formato detectado: <strong>${esc(format)}</strong>. Revisá que el archivo tenga el formato correcto.</div>`;
+      btn.disabled=false; btn.textContent='Cargar';
+      return;
+    }
+
+    // Fetch env var names if environment selected
+    let envVarNames=[];
+    let hasEnv=false;
+    if(envName){
+      envVarNames=await fetchEnvVarNames(owner,repo,envName);
+      hasEnv=true;
+    }
+
+    // Also refresh env list in case it changed
+    const envs=await fetchEnvironments(owner,repo);
+    const envSel=document.getElementById('env-sel');
+    const currEnv=envSel.value;
+    envSel.innerHTML=`<option value="">— Sin environment —</option>`+
+      envs.map(e=>`<option value="${esc(e)}"${e===currEnv?' selected':''}>${esc(e)}</option>`).join('');
+    envSel.disabled=envs.length===0;
+
+    // Compute diff
+    const envSet=new Set(envVarNames.map(k=>k.toUpperCase()));
+    const refSet=new Set(refKeys.map(k=>k.toUpperCase()));
+
+    const missing=hasEnv?refKeys.filter(k=>!envSet.has(k.toUpperCase())):[];
+    const present=hasEnv?refKeys.filter(k=>envSet.has(k.toUpperCase())):[];
+    const extra=hasEnv?envVarNames.filter(k=>!refSet.has(k.toUpperCase())):[];
+
+    // Summary bar
+    if(hasEnv){
+      document.getElementById('summary-bar').style.display='flex';
+      const parts=[
+        present.length?`<span class="sb-chip sb-ok">✓ ${present.length} presente${present.length!==1?'s':''}</span>`:'',
+        missing.length?`<span class="sb-chip sb-miss">✗ ${missing.length} faltante${missing.length!==1?'s':''}</span>`:'',
+        extra.length?`<span class="sb-chip sb-extra">∞ ${extra.length} extra en environment</span>`:'',
+        `<span class="sb-info">${esc(owner)}/${esc(repo)} · ${esc(envName)} · ${esc(format)}</span>`,
+      ];
+      document.getElementById('summary-bar').innerHTML=parts.join('');
+    }
+
+    // Build table
+    const refRows=refKeys.map(key=>{
+      const inEnv=hasEnv?envSet.has(key.toUpperCase()):null;
+      const isMiss=hasEnv&&!inEnv;
+      return`<tr class="${isMiss?'row-miss':''}">
+        <td><span class="key-name">${esc(key)}</span></td>
+        <td>${
+          !hasEnv
+            ? `<span class="gap-ne">—</span>`
+            : inEnv
+              ? `<span class="gap-ok">✓ presente</span>`
+              : `<span class="gap-miss">✗ faltante</span>`
+        }</td>
+      </tr>`;
+    }).join('');
+
+    const extraRows=extra.map(key=>`<tr>
+      <td><span class="key-name extra">${esc(key)}</span></td>
+      <td><span class="gap-extra">∞ extra</span></td>
+    </tr>`).join('');
+
+    const envColHead=hasEnv
+      ? `<th>En <em>${esc(envName)}</em></th>`
+      : `<th style="color:var(--ne)">Environment</th>`;
+
+    const hint=hasEnv
+      ? `<strong>${refKeys.length}</strong> keys en <code>${esc(refPath)}</code> · comparando contra environment <strong>${esc(envName)}</strong>`
+      : `<strong>${refKeys.length}</strong> keys en <code>${esc(refPath)}</code> · seleccioná un environment para comparar`;
+
+    document.getElementById('content-area').innerHTML=`
+      <p class="hint">${hint}</p>
+      <table>
+        <thead><tr><th>Key</th>${envColHead}</tr></thead>
+        <tbody>${refRows}${extraRows}</tbody>
+      </table>
+      ${extra.length?`<p style="color:var(--ne);font-size:11px;margin-top:8px">Las keys marcadas con ∞ existen en el environment pero no están en el archivo de referencia.</p>`:''}
+    `;
+
+  } catch(e){
+    document.getElementById('content-area').innerHTML=`<div class="notice err">Error: ${esc(e.message)}</div>`;
+  }
+
+  btn.disabled=false; btn.textContent='Cargar';
+}
+
+function init(){
+  if(!getPat()||!getRepos()){ location.replace('index.html'); return; }
+  const ctx=new URLSearchParams(location.search).get('ctx');
+  if(!ctx){ location.replace('index.html'); return; }
+  currentContext=ctx;
+  applyI18n();
+
+  document.getElementById('back-link').href=`dashboard.html?ctx=${encodeURIComponent(ctx)}`;
+
+  initRepoSelector();
+}
+
+init();
+</script>
+</body>
+</html>

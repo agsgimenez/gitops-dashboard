@@ -96,6 +96,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <span id="org-indicator" style="display:none"></span>
   <div id="chips"></div>
   <button class="hbtn" id="rbtn" onclick="loadAll()" data-i18n="refresh"></button>
+  <a class="hbtn" id="release-link" href="release-status.html" style="text-decoration:none">🚀 Releases</a>
+  <a class="hbtn" id="gaps-link" href="config-gaps.html" style="text-decoration:none">🔍 Config Gaps</a>
   <button class="hbtn" id="lang-btn" onclick="toggleLang()"></button>
 </header>
 
@@ -131,6 +133,8 @@ function init(){
   applyI18n();
   document.getElementById('content').querySelector('#loading').textContent=t('pr_loading');
   document.getElementById('back-link').href=`dashboard.html?ctx=${encodeURIComponent(ctx)}`;
+  document.getElementById('release-link').href=`release-status.html?ctx=${encodeURIComponent(ctx)}`;
+  document.getElementById('gaps-link').href=`config-gaps.html?ctx=${encodeURIComponent(ctx)}`;
   const ind=document.getElementById('org-indicator');
   ind.style.display='flex';
   if(ctx==='all') ind.textContent='Todos';

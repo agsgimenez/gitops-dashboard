@@ -1,0 +1,18 @@
+services:
+  gitops-dashboard:
+    build: .
+    ports:
+      - "8080:80"
+    # Option A: inject config via env vars (PAT will be written to config.js on disk — use only on localhost/VPN)
+    environment:
+      GD_PAT: "${GD_PAT:-}"
+      GD_REPOS: "${GD_REPOS:-}"
+    # Option B: mount your own config.js (comment out environment block above and uncomment below)
+    # volumes:
+    #   - ./config.js:/usr/share/nginx/html/config.js:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
