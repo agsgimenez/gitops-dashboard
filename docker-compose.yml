@@ -3,9 +3,13 @@ services:
     build: .
     ports:
       - "8081:80"
-    # config.js se monta desde el directorio padre (gitignored, nunca entra a la imagen)
-    volumes:
-      - ../config.js:/usr/share/nginx/html/config.js:ro
+    # Option A: inject config via environment variables
+    # environment:
+    #   GD_PAT: "${GD_PAT:-}"
+    #   GD_REPOS: "${GD_REPOS:-}"
+    # Option B: mount your own config.js
+    # volumes:
+    #   - ./config.js:/usr/share/nginx/html/config.js:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost/healthz"]
