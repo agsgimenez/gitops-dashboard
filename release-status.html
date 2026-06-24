@@ -85,8 +85,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <input id="cfg-to" class="cfg-inp w80" value="main" placeholder="main"/>
   </div>
   <div class="cfg-group">
-    <span class="cfg-label">Workflow release (contiene)</span>
-    <input id="cfg-pattern" class="cfg-inp w200" value="prepare release" placeholder="prepare release · dejar vacío para omitir"/>
+    <span class="cfg-label">Workflow release (contiene alguno, separados por coma)</span>
+    <input id="cfg-pattern" class="cfg-inp w200" value="prepare release" placeholder="patrón1, patrón2 · vacío = omitir" title="Uno o más patrones separados por coma. Un run matchea si su nombre contiene cualquiera de ellos."/>
   </div>
   <div class="cfg-group">
     <span class="cfg-label">Ventana (hs)</span>
@@ -137,9 +137,9 @@ async function fetchCompare(owner,repo,base,head){
 async function fetchRecentRelease(owner,repo,pattern,hours){
   const cutoff=new Date(Date.now()-hours*3600*1000);
   const d=await ghGet(`/repos/${owner}/${repo}/actions/runs?per_page=100`);
-  const lc=pattern.toLowerCase();
+  const patterns=pattern.split(',').map(p=>p.trim().toLowerCase()).filter(Boolean);
   const runs=(d.workflow_runs||[])
-    .filter(r=>r.name.toLowerCase().includes(lc))
+    .filter(r=>patterns.some(p=>r.name.toLowerCase().includes(p)))
     .sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
   if(!runs.length) return null;
   const latest=runs[0];
