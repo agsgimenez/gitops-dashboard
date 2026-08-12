@@ -10,18 +10,27 @@ Too many tabs open to monitor GitHub Actions across multiple orgs? GitOps Dashbo
 
 Built with plain HTML, CSS and JavaScript. Runs directly in the browser.
 
-## Screenshots
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/github-lockup-white.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/github-lockup-black.svg">
+    <img alt="GitHub" src="docs/assets/github-lockup-black.svg" width="108">
+  </picture>
+</p>
 
-> _Add screenshots after setup_
+**Integrates with GitHub.** GitOps Dashboard is maintained by a
+[GitHub Developer Program](https://docs.github.com/en/integrations/concepts/github-developer-program)
+member and uses the GitHub REST API directly from the browser.
 
-| Dashboard | PR Board | Env Manager |
-|-----------|----------|-------------|
-| ![Dashboard](docs/dashboard.png) | ![PR Board](docs/pr-board.png) | ![Env Manager](docs/env-manager.png) |
+## Live overview
+
+[Open the public product overview](https://agsgimenez.github.io/gitops-dashboard/)
+for a sanitized workflow preview, feature tour, security model and setup guide.
 
 ## Pages
 
 | File | Role |
-|------|------|
+| --- | --- |
 | `index.html` | Home — PAT setup + workspace switcher |
 | `dashboard.html?ctx=<org>` | CI dashboard filtered to selected context |
 | `prs.html?ctx=<org>` | PR Board — open PRs with live check runs |
@@ -51,7 +60,7 @@ window.CI_CONFIG = {
 Go to [github.com/settings/tokens](https://github.com/settings/tokens) and create a token with:
 
 | Scope | Required | Used for |
-|-------|----------|----------|
+| --- | --- | --- |
 | `repo` | ✅ Yes | Read workflows, environments, repo-level and env-level variables/secrets |
 | `workflow` | ✅ Yes | Trigger `workflow_dispatch` |
 | `admin:org` (read) | ⚠ Optional | Show org-level variables and secrets in the Env Manager. Without it the org section displays a "no access" notice but the rest still works. |
@@ -117,6 +126,11 @@ GitOps Dashboard has no backend. All GitHub API requests run directly from your 
 ```
 
 Files in `envs/` are gitignored.
+
+## Support
+
+Open a [GitHub issue](https://github.com/agsgimenez/gitops-dashboard/issues)
+or email [gimenezagustin98@hotmail.com](mailto:gimenezagustin98@hotmail.com).
 
 ## Project structure
 
