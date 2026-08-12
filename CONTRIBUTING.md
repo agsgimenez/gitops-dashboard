@@ -20,7 +20,7 @@ Open an [issue](https://github.com/agsgimenez/gitops-dashboard/issues/new?templa
 ### Branch naming
 
 | Prefix | Use for |
-|--------|---------|
+| --- | --- |
 | `feature/` | New functionality |
 | `fix/` | Bug corrections |
 | `docs/` | Documentation only |
@@ -60,7 +60,7 @@ gitops-dashboard/
 ## PAT scopes required for testing
 
 | Scope | Used by |
-|-------|---------|
+| --- | --- |
 | `repo` | Workflows, environments, variables, secrets, PRs |
 | `workflow` | Dispatching `workflow_dispatch` |
 

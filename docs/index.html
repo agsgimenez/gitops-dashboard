@@ -38,6 +38,12 @@ nav .spacer{flex:1}
 .hero h1 span{background:linear-gradient(135deg,#58a6ff,#a371f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .hero p{font-size:clamp(1rem,2vw,1.15rem);color:var(--mu);max-width:620px;margin:0 auto 40px;line-height:1.75}
 .hero-ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.github-integration{width:max-content;max-width:100%;margin:34px auto 0;padding:14px 18px;border:1px solid var(--bd);border-radius:10px;display:flex;align-items:center;justify-content:center;gap:16px;color:var(--mu);font-size:12px;text-align:left}
+.github-integration img{display:block;width:94px;height:auto;flex:0 0 auto}
+.github-integration span{display:flex;flex-direction:column;line-height:1.45}
+.github-integration strong{color:var(--tx);font-size:12px}
+.github-integration a{color:var(--lk);text-decoration:none}
+.github-integration a:hover{text-decoration:underline}
 .btn-primary{background:var(--accent);color:#0d1117;padding:12px 28px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:700;transition:all .15s;display:inline-flex;align-items:center;gap:8px}
 .btn-primary:hover{background:#79c0ff;transform:translateY(-1px)}
 .btn-secondary{background:transparent;color:var(--tx);padding:12px 28px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:600;border:1px solid var(--bd);transition:all .15s;display:inline-flex;align-items:center;gap:8px}
@@ -134,6 +140,7 @@ footer{border-top:1px solid var(--bd);padding:32px 5%;display:flex;align-items:c
   .security{padding:60px 16px}
   .banner{padding:40px 16px}
   .banner-inner{padding:32px 20px}
+  .github-integration{align-items:flex-start}
   footer{flex-direction:column;align-items:flex-start}
   .nav-link{display:none}
 }
@@ -170,6 +177,13 @@ footer{border-top:1px solid var(--bd);padding:32px 5%;display:flex;align-items:c
     <a class="btn-secondary" href="#how">
       How it works ↓
     </a>
+  </div>
+  <div class="github-integration">
+    <img src="assets/github-lockup-white.svg" alt="GitHub">
+    <span>
+      <strong>Integrates with GitHub</strong>
+      <a href="https://docs.github.com/en/integrations/concepts/github-developer-program" target="_blank" rel="noreferrer">Developer Program member ↗</a>
+    </span>
   </div>
 </section>
 
@@ -321,6 +335,7 @@ footer{border-top:1px solid var(--bd);padding:32px 5%;display:flex;align-items:c
     <a href="https://github.com/agsgimenez/gitops-dashboard" target="_blank">GitHub</a>
     <a href="https://github.com/agsgimenez/gitops-dashboard#setup" target="_blank">Docs</a>
     <a href="https://github.com/agsgimenez/gitops-dashboard/issues" target="_blank">Issues</a>
+    <a href="mailto:gimenezagustin98@hotmail.com">Support</a>
     <a href="https://github.com/agsgimenez/gitops-dashboard/blob/main/LICENSE" target="_blank">MIT License</a>
   </div>
   <span class="footer-copy">© 2026 · Built with zero dependencies</span>
