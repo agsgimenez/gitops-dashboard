@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="480" viewBox="0 0 1200 480" role="img" aria-labelledby="title desc">
+  <title id="title">GitOps Dashboard</title>
+  <desc id="desc">A product banner showing workflows, pull requests and environments in one browser tab.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1117"/>
+      <stop offset="0.55" stop-color="#111827"/>
+      <stop offset="1" stop-color="#17122b"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#58a6ff"/>
+      <stop offset="1" stop-color="#a371f7"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="42"/>
+    </filter>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#000" flood-opacity="0.42"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="480" rx="24" fill="url(#bg)"/>
+  <circle cx="190" cy="-30" r="180" fill="#58a6ff" opacity="0.11" filter="url(#glow)"/>
+  <circle cx="1060" cy="460" r="210" fill="#a371f7" opacity="0.13" filter="url(#glow)"/>
+  <path d="M0 398C218 325 368 454 596 386s393-94 604-8v102H0Z" fill="#58a6ff" opacity="0.025"/>
+
+  <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+    <g transform="translate(72 78)">
+      <rect width="146" height="28" rx="14" fill="#58a6ff" opacity="0.12"/>
+      <circle cx="17" cy="14" r="4" fill="#58a6ff"/>
+      <text x="29" y="18" fill="#79c0ff" font-size="11" font-weight="700" letter-spacing="1">OPEN SOURCE</text>
+      <text x="0" y="86" fill="#f0f6fc" font-size="52" font-weight="800" letter-spacing="-1.5">GitOps Dashboard</text>
+      <rect x="0" y="102" width="382" height="5" rx="2.5" fill="url(#accent)"/>
+      <text x="0" y="150" fill="#b1bac4" font-size="21">GitHub operations, without the tab overload.</text>
+      <text x="0" y="190" fill="#8b949e" font-size="15">Actions · Pull requests · Environments</text>
+
+      <g transform="translate(0 232)">
+        <rect width="152" height="42" rx="8" fill="#58a6ff"/>
+        <text x="76" y="27" text-anchor="middle" fill="#0d1117" font-size="14" font-weight="700">Live overview  →</text>
+        <rect x="164" width="126" height="42" rx="8" fill="#161b22" stroke="#30363d"/>
+        <text x="227" y="27" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600">View source</text>
+      </g>
+    </g>
+
+    <g transform="translate(618 54)" filter="url(#shadow)">
+      <rect width="510" height="370" rx="14" fill="#161b22" stroke="#30363d"/>
+      <rect width="510" height="42" rx="14" fill="#1c2128"/>
+      <path d="M0 42h510" stroke="#30363d"/>
+      <circle cx="22" cy="21" r="5" fill="#ff5f56"/>
+      <circle cx="40" cy="21" r="5" fill="#ffbd2e"/>
+      <circle cx="58" cy="21" r="5" fill="#27c93f"/>
+      <rect x="91" y="13" width="236" height="16" rx="8" fill="#0d1117"/>
+      <text x="108" y="24" fill="#6e7681" font-size="9">dashboard.html?ctx=my-org</text>
+
+      <text x="24" y="82" fill="#f0f6fc" font-size="14" font-weight="700">Workflow health</text>
+      <g transform="translate(342 65)">
+        <rect width="40" height="22" rx="11" fill="#3fb950" opacity="0.13"/><text x="20" y="15" text-anchor="middle" fill="#56d364" font-size="10" font-weight="700">24</text>
+        <rect x="47" width="36" height="22" rx="11" fill="#f85149" opacity="0.13"/><text x="65" y="15" text-anchor="middle" fill="#ff7b72" font-size="10" font-weight="700">3</text>
+        <rect x="90" width="44" height="22" rx="11" fill="#d29922" opacity="0.13"/><text x="112" y="15" text-anchor="middle" fill="#e3b341" font-size="10" font-weight="700">2</text>
+      </g>
+      <path d="M24 99h462" stroke="#30363d"/>
+
+      <g transform="translate(24 120)">
+        <rect width="462" height="55" rx="8" fill="#1c2128"/>
+        <circle cx="20" cy="27" r="6" fill="#3fb950"/>
+        <text x="38" y="23" fill="#e6edf3" font-size="12" font-weight="600">Deploy production</text>
+        <text x="38" y="40" fill="#6e7681" font-size="9">main · push</text>
+        <rect x="360" y="17" width="78" height="21" rx="10.5" fill="#3fb950" opacity="0.12"/>
+        <text x="399" y="31" text-anchor="middle" fill="#56d364" font-size="9" font-weight="700">SUCCESS</text>
+      </g>
+      <g transform="translate(24 185)">
+        <rect width="462" height="55" rx="8" fill="#1c2128"/>
+        <circle cx="20" cy="27" r="6" fill="#f85149"/>
+        <text x="38" y="23" fill="#e6edf3" font-size="12" font-weight="600">Build and test</text>
+        <text x="38" y="40" fill="#6e7681" font-size="9">feature/auth · pull request</text>
+        <rect x="360" y="17" width="78" height="21" rx="10.5" fill="#f85149" opacity="0.12"/>
+        <text x="399" y="31" text-anchor="middle" fill="#ff7b72" font-size="9" font-weight="700">FAILED</text>
+      </g>
+      <g transform="translate(24 250)">
+        <rect width="462" height="55" rx="8" fill="#1c2128"/>
+        <circle cx="20" cy="27" r="6" fill="#d29922"/>
+        <text x="38" y="23" fill="#e6edf3" font-size="12" font-weight="600">Security scan</text>
+        <text x="38" y="40" fill="#6e7681" font-size="9">dev · schedule</text>
+        <rect x="346" y="17" width="92" height="21" rx="10.5" fill="#d29922" opacity="0.12"/>
+        <text x="392" y="31" text-anchor="middle" fill="#e3b341" font-size="9" font-weight="700">IN PROGRESS</text>
+      </g>
+      <text x="24" y="340" fill="#6e7681" font-size="10">27 repositories · 3 organizations</text>
+      <text x="486" y="340" text-anchor="end" fill="#58a6ff" font-size="10">refreshing in 28s</text>
+    </g>
+  </g>
+</svg>
