@@ -117,6 +117,9 @@ GitOps Dashboard has no backend. All GitHub API requests run directly from your 
 - `workflow_dispatch` is gated by the `workflow` scope; you control which token you create and what scopes you grant
 - Secrets values are never fetched — only names are retrieved via the GitHub API
 
+Read the full [security policy](SECURITY.md) for the threat model, safe usage
+guidance and private vulnerability reporting instructions.
+
 ## Scripts
 
 `scripts/sync-env.sh` uploads a local `.env` file to a GitHub Environment via the `gh` CLI:
@@ -148,6 +151,7 @@ gitops-dashboard/
 │   └── sync-env.sh       # Bulk upload vars/secrets via gh CLI
 ├── envs/                 # Local .env files (gitignored)
 ├── docs/                 # Public landing page (GitHub Pages)
+├── SECURITY.md           # Threat model and vulnerability reporting
 ├── LICENSE
 └── README.md
 ```
