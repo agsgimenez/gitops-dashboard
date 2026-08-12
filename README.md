@@ -1,31 +1,33 @@
-# GitOps Dashboard
-
-Too many tabs open to monitor GitHub Actions across multiple orgs? GitOps Dashboard gives you a single pane of glass for your GitHub operations — workflows, PRs, environments — without leaving the browser.
-
-- Monitor CI workflows across all your repos and orgs
-- Trigger `workflow_dispatch` with declared inputs, without leaving the dashboard
-- Track open PRs with live check runs and reviewer status
-- Manage GitHub Environment variables and secrets from a visual UI
-- No backend. No build step. No install required.
-
-Built with plain HTML, CSS and JavaScript. Runs directly in the browser.
-
-<p>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/github-lockup-white.svg">
-    <source media="(prefers-color-scheme: light)" srcset="docs/assets/github-lockup-black.svg">
-    <img alt="GitHub" src="docs/assets/github-lockup-black.svg" width="108">
-  </picture>
+<p align="center">
+  <a href="https://agsgimenez.github.io/gitops-dashboard/">
+    <img src="docs/assets/readme-hero.svg" alt="GitOps Dashboard — GitHub operations, without the tab overload">
+  </a>
 </p>
 
-**Integrates with GitHub.** GitOps Dashboard is maintained by a
-[GitHub Developer Program](https://docs.github.com/en/integrations/concepts/github-developer-program)
-member and uses the GitHub REST API directly from the browser.
+<p align="center">
+  <strong>Monitor GitHub Actions, review pull requests and manage environments<br>across repositories and organizations—from one browser tab.</strong>
+</p>
 
-## Live overview
+<p align="center">
+  <a href="https://agsgimenez.github.io/gitops-dashboard/"><strong>Live overview</strong></a>
+  ·
+  <a href="#setup">Setup</a>
+  ·
+  <a href="#security">Security</a>
+  ·
+  <a href="https://github.com/agsgimenez/gitops-dashboard/issues">Support</a>
+</p>
 
-[Open the public product overview](https://agsgimenez.github.io/gitops-dashboard/)
-for a sanitized workflow preview, feature tour, security model and setup guide.
+| ⚡ Workflows | 🔀 Pull requests | 🔐 Environments |
+| --- | --- | --- |
+| Monitor CI across every configured repo and dispatch manual workflows with their declared inputs. | See live checks, reviewers and merge readiness without opening each repository. | Compare variables and secret names across org, repository and environment scopes. |
+
+> [!NOTE]
+> **No backend, build step or install.** GitOps Dashboard runs directly in the
+> browser with plain HTML, CSS and JavaScript. It integrates with the GitHub REST
+> API and is maintained by a
+> [GitHub Developer Program](https://docs.github.com/en/integrations/concepts/github-developer-program)
+> member.
 
 ## Pages
 
