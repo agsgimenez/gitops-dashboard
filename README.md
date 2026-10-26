@@ -37,6 +37,8 @@
 | `dashboard.html?ctx=<org>` | CI dashboard filtered to selected context |
 | `prs.html?ctx=<org>` | PR Board — open PRs with live check runs |
 | `env-manager.html?ctx=<org>` | GitHub Environments variable and secret manager |
+| `release-status.html?ctx=<org>` | Compare branches and recent release workflows |
+| `config-gaps.html?ctx=<org>` | Compare reference config keys with GitHub Environment variables |
 
 ## Setup
 
@@ -67,7 +69,7 @@ Go to [github.com/settings/tokens](https://github.com/settings/tokens) and creat
 | `workflow` | ✅ Yes | Trigger `workflow_dispatch` |
 | `admin:org` (read) | ⚠ Optional | Show org-level variables and secrets in the Env Manager. Without it the org section displays a "no access" notice but the rest still works. |
 
-The token is entered once in the UI and stored in your browser's `localStorage`. It is never written to any file.
+When entered in the UI, the token is stored in your browser's `localStorage`. The optional Docker environment configuration below writes it to `config.js` inside the container.
 
 ### 3. Open
 
@@ -107,11 +109,23 @@ start "C:\path\to\gitops-dashboard\index.html"
 - Compare with `.env.example` to detect keys declared in the contract but missing in the environment
 - Org-level section requires `admin:org` PAT scope; shows a clear notice if absent
 
+### Local Docker service
+
+Run `docker compose up --build -d` and open `http://127.0.0.1:8081`.
+The example binds only to loopback. Enter the PAT in the browser and configure
+repos there, or mount your own ignored `config.js` using the commented volume.
+
+For an isolated deployment, `GD_REPOS` accepts comma or newline separated
+`owner/repo` entries. Optional `GD_PAT` is written to `config.js` inside the
+container and is visible to anyone who can access that service. Keep this mode
+private; never publish the generated config. Host-specific monitors, `.env`
+files and backups are excluded from the Docker build context.
+
 ## Security
 
 GitOps Dashboard has no backend. All GitHub API requests run directly from your browser using the PAT you provide.
 
-- Your token is stored in `localStorage` only — never written to files, never sent to any third-party service
+- Tokens entered in the browser are stored in `localStorage`; optional Docker `GD_PAT` configuration writes the token to the private service's `config.js`. No token is sent to a third-party service.
 - No telemetry, no analytics, no external requests beyond `api.github.com` and `github.com` (avatars)
 - Open source — you can read every line before running it
 - `workflow_dispatch` is gated by the `workflow` scope; you control which token you create and what scopes you grant
