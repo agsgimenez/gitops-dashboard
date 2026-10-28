@@ -29,3 +29,6 @@ jobs:
 
       - name: Lint Markdown
         run: npx markdownlint-cli2 "**/*.md" "#node_modules/**"
+
+      - name: Test release and config views
+        run: node --test scripts/release-config.test.mjs
