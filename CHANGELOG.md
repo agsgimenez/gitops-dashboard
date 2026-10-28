@@ -2,6 +2,15 @@
 
 All notable changes to GitOps Dashboard are documented here.
 
+## [1.1.0] — 2026-06-24
+
+### Added
+
+- **Release Status** (`release-status.html`) — per-repo diff between two configurable branches (default `test → main`); detects repos with pending commits and no recent release workflow run. Config bar: source/target branch, workflow name pattern (comma-separated, OR logic), recency window in hours. Skeleton loading per repo; status chips in header.
+- **Config Gaps** (`config-gaps.html`) — compares a reference file (`.env.example`, `appsettings.example.json`, YAML, or any custom path) against a GitHub Environment's variable list. Shows present / missing / extra keys without exposing values. Preset buttons for common reference file names; parsers for `.env`, flat JSON (`Section__Key`), and simple YAML.
+- **Docker support** — `Dockerfile` + `nginx.conf` + `docker-compose.yml` + `docker-entrypoint.sh`. Generates `config.js` at container start from `GD_PAT` / `GD_REPOS` env vars, or accepts a mounted `config.js` volume. Health check at `/healthz`.
+- **Navigation** — 🚀 Releases and 🔍 Config Gaps links added to the header of Dashboard, PR Board, and Env Manager; context (`?ctx=`) is forwarded automatically.
+
 ## [1.0.0] — 2026-06-05
 
 ### Added
